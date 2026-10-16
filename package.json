@@ -1,0 +1,68 @@
+{
+	"name": "@k79/theme-studio",
+	"version": "1.0.0",
+	"description": "Zero-flash, Tailwind v4-first React theme engine with compact cookie diffing and cross-tab sync",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.cjs"
+		},
+		"./server": {
+			"types": "./dist/server.d.mts",
+			"import": "./dist/server.mjs",
+			"require": "./dist/server.cjs"
+		},
+		"./tailwind": {
+			"types": "./dist/tailwind.d.mts",
+			"import": "./dist/tailwind.mjs",
+			"require": "./dist/tailwind.cjs"
+		}
+	},
+	"files": [
+		"dist",
+		"server.d.ts",
+		"server.js",
+		"tailwind.d.ts",
+		"tailwind.js"
+	],
+	"scripts": {
+		"build": "tsdown",
+		"dev": "tsdown --watch",
+		"test": "bun test",
+		"typecheck": "tsc --noEmit",
+		"scaffold:matrix": "node scripts/scaffold-matrix.mjs",
+		"lint": "biome check .",
+		"format": "biome check --write .",
+		"dev:next15": "bun --cwd test-matrix/next-15-shadcn dev",
+		"dev:next14": "bun --cwd test-matrix/next-14-tailwind-v3 dev",
+		"dev:vite": "bun --cwd test-matrix/vite-react-tw4 dev",
+		"matrix:reset": "node scripts/reset-matrix.mjs",
+		"reset:matrix": "node scripts/reset-matrix.mjs",
+		"dev:react17": "bun --cwd test-matrix/react-17-tailwind-v3 dev"
+	},
+	"peerDependencies": {
+		"react": ">=16.8.0",
+		"react-dom": ">=16.8.0"
+	},
+	"devDependencies": {
+		"@clack/prompts": "^1.8.1",
+		"@types/node": "^26.6.5",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
+		"picocolors": "^1.1.1",
+		"react": "^19.3.1",
+		"react-dom": "^19.3.1",
+		"tsdown": "^0.23.1",
+		"typescript": "^5.9.3"
+	},
+	"sideEffects": false,
+	"bin": {
+		"theme-studio": "./dist/cli.mjs",
+		"@k79/theme-studio": "./dist/cli.mjs"
+	}
+}
