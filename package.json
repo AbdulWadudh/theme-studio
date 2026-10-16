@@ -43,7 +43,8 @@
 		"dev:vite": "bun --cwd test-matrix/vite-react-tw4 dev",
 		"matrix:reset": "node scripts/reset-matrix.mjs",
 		"reset:matrix": "node scripts/reset-matrix.mjs",
-		"dev:react17": "bun --cwd test-matrix/react-17-tailwind-v3 dev"
+		"dev:react17": "bun --cwd test-matrix/react-17-tailwind-v3 dev",
+		"release": "bun scripts/release.ts"
 	},
 	"peerDependencies": {
 		"react": ">=16.8.0",
