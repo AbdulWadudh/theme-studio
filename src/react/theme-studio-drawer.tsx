@@ -3,48 +3,53 @@
 import {
 	Cancel01Icon,
 	CheckmarkBadge01Icon,
-	Globe02Icon,
-	LockKeyIcon,
 	PaintBoardIcon,
 	RotateLeft01Icon,
 	Search01Icon,
-	SparklesIcon,
 	TextFontIcon,
-	ViewIcon,
-	ViewOffIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import type React from "react";
 import { useEffect, useState } from "react";
-import {
-	type FontsourceItem,
-	loadFontsourceFont,
-	POPULAR_FONTSOURCE_FONTS,
-	searchFontsourceFonts,
-} from "../core/fonts";
 import {
 	DEFINED_RADIUS_OPTIONS,
 	GLOW_COLOR_CHIPS,
 	getGlowValues,
 	SHADOW_PRESETS,
 } from "../core/presets";
-import type { BaseTokens } from "../core/types";
+import type { BaseTokens, ThemeDefinition } from "../core/types";
 import { ColorPickerField } from "./color-picker-field";
 import { useTheme } from "./use-theme";
 
-export interface FontPairing {
+interface FontsourceItem {
 	id: string;
-	name: string;
-	headingFontVar: string;
-	bodyFontVar: string;
-	headingName: string;
-	bodyName: string;
+	family: string;
+	category: string;
 }
 
-export const FONT_PAIRINGS: FontPairing[] = [
+const POPULAR_FONTSOURCE_FONTS: FontsourceItem[] = [
+	{ id: "inter", family: "Inter", category: "sans-serif" },
+	{ id: "roboto", family: "Roboto", category: "sans-serif" },
+	{ id: "open-sans", family: "Open Sans", category: "sans-serif" },
+	{ id: "montserrat", family: "Montserrat", category: "sans-serif" },
+	{ id: "poppins", family: "Poppins", category: "sans-serif" },
+	{ id: "lato", family: "Lato", category: "sans-serif" },
+	{ id: "space-grotesk", family: "Space Grotesk", category: "sans-serif" },
+	{ id: "fira-code", family: "Fira Code", category: "monospace" },
+	{ id: "jetbrains-mono", family: "JetBrains Mono", category: "monospace" },
+	{ id: "playfair-display", family: "Playfair Display", category: "serif" },
+	{ id: "merriweather", family: "Merriweather", category: "serif" },
+	{ id: "outfit", family: "Outfit", category: "sans-serif" },
+	{
+		id: "plus-jakarta-sans",
+		family: "Plus Jakarta Sans",
+		category: "sans-serif",
+	},
+];
+
+const FONT_PAIRINGS = [
 	{
 		id: "ibm-noto",
-		name: "IBM Plex Sans + Noto Sans (Default)",
+		name: "IBM Plex Sans + Noto Sans",
 		headingFontVar: "var(--font-ibm-plex)",
 		bodyFontVar: "var(--font-noto-sans)",
 		headingName: "IBM Plex Sans",
@@ -122,7 +127,7 @@ export function ThemeStudioDrawer() {
 	} | null>(null);
 	const [showCustomShadowInputs, setShowCustomShadowInputs] = useState(false);
 
-	// Inject styles for Colorshot popover and tactile physics
+	// Inject styles for Colorshot popover, field reset, and tactile physics
 	useEffect(() => {
 		if (typeof document === "undefined") return;
 		const id = "k79-theme-studio-tactile-style";
@@ -131,8 +136,8 @@ export function ThemeStudioDrawer() {
 			style.id = id;
 			style.textContent = `
 .tactile-always-active,
-[data-tactile="true"] button:not(:disabled):not([data-no-tactile]),
-[data-tactile="true"] [role="button"]:not([data-no-tactile]),
+[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):not([data-colorshot-field]),
+[data-tactile="true"] [role="button"]:not([data-no-tactile]):not([data-colorshot-field]),
 [data-tactile="true"] .tactile-item {
 	box-shadow: 4px 4px 0px 0px #000000 !important;
 	border-color: #000000 !important;
@@ -143,50 +148,64 @@ export function ThemeStudioDrawer() {
 }
 
 .tactile-always-active:hover,
-[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):hover,
-[data-tactile="true"] [role="button"]:not([data-no-tactile]):hover,
+[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):not([data-colorshot-field]):hover,
+[data-tactile="true"] [role="button"]:not([data-no-tactile]):not([data-colorshot-field]):hover,
 [data-tactile="true"] .tactile-item:hover {
 	transform: translate(2px, 2px) !important;
 	box-shadow: 2px 2px 0px 0px #000000 !important;
 }
 
 .tactile-always-active:active,
-[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):active,
-[data-tactile="true"] [role="button"]:not([data-no-tactile]):active,
+[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):not([data-colorshot-field]):active,
+[data-tactile="true"] [role="button"]:not([data-no-tactile]):not([data-colorshot-field]):active,
 [data-tactile="true"] .tactile-item:active {
 	transform: translate(4px, 4px) !important;
 	box-shadow: 0px 0px 0px 0px #000000 !important;
 }
 
 /* Ensure Colorshot popover displays above high z-index drawers/modals */
-body [data-colorshot-popover] {
+body [data-colorshot-popover],
+[data-colorshot-popover] {
 	z-index: 999999 !important;
 }
 
 /* Reset Colorshot trigger button to avoid weird double containers */
-[data-colorshot-field] {
+button[data-colorshot-field],
+[data-colorshot-field],
+[data-colorshot-field]:not([data-theme="light"]),
+[data-colorshot-field][data-theme="dark"],
+[data-colorshot-field][data-theme="light"] {
 	background: transparent !important;
+	background-color: transparent !important;
 	border: none !important;
 	padding: 0 !important;
+	margin: 0 !important;
 	height: auto !important;
 	min-height: 0 !important;
+	width: auto !important;
+	min-width: 0 !important;
 	box-shadow: none !important;
+	outline: none !important;
 	display: inline-flex !important;
 	align-items: center !important;
 	justify-content: center !important;
 	cursor: pointer !important;
 }
+
 [data-colorshot-field]:hover,
 [data-colorshot-field]:focus,
 [data-colorshot-field]:focus-visible,
 [data-colorshot-field][data-state="open"] {
 	background: transparent !important;
+	background-color: transparent !important;
 	border: none !important;
 	outline: none !important;
 	box-shadow: none !important;
 }
+
 [data-colorshot-field] [data-part="field-text"],
-[data-colorshot-field] [data-part="field-alpha"] {
+[data-colorshot-field] [data-part="field-alpha"],
+[data-colorshot-field] [data-part="field-swatch"] {
 	display: none !important;
 }
 `;
@@ -252,51 +271,16 @@ body [data-colorshot-popover] {
 
 	if (!isRendered) return null;
 
-	const updateToken = <K extends keyof BaseTokens>(
-		key: K,
-		value: BaseTokens[K],
-	) => {
-		setCustomTokens({ [key]: value });
-	};
+	const isLight =
+		resolvedMode === "light" ||
+		(!resolvedMode &&
+			(tokens.canvas?.toLowerCase().startsWith("#f") ||
+				tokens.canvas?.toLowerCase() === "#ffffff" ||
+				tokens.canvas?.toLowerCase().startsWith("#fa")));
 
-	const applyShadowPreset = (presetId: string) => {
-		const preset = SHADOW_PRESETS.find((p) => p.id === presetId);
-		if (!preset) return;
-		if (preset.isGlow) {
-			const glowHex = tokens.glowColor || tokens.primary || "#38BDF8";
-			const vals = getGlowValues(glowHex);
-			setCustomTokens({
-				shadow: vals.value,
-				shadowSm: vals.sm,
-				shadowLg: vals.lg,
-				glowColor: glowHex,
-			});
-		} else {
-			setCustomTokens({
-				shadow: preset.value,
-				shadowSm: preset.sm,
-				shadowLg: preset.lg,
-			});
-		}
-	};
-
-	const handleGlowColorChange = (newColor: string) => {
-		let resolved = newColor;
-		if (newColor === "primary") resolved = tokens.primary;
-		if (newColor === "accent") resolved = tokens.accent;
-		const vals = getGlowValues(resolved);
-		setCustomTokens({
-			glowColor: resolved,
-			shadow: vals.value,
-			shadowSm: vals.sm,
-			shadowLg: vals.lg,
-		});
-	};
-
-	const toggleTactile = () => {
-		const nextVal = tokens.tactile === "true" ? "false" : "true";
-		setCustomTokens({ tactile: nextVal });
-	};
+	const currentPresetObj =
+		themes.find((p: ThemeDefinition<BaseTokens>) => p.id === theme) ||
+		themes[0];
 
 	const selectPreset = (presetId: string) => {
 		setTheme(presetId);
@@ -305,59 +289,134 @@ body [data-colorshot-popover] {
 	const selectFontPairing = (pairingId: string) => {
 		const pairing = FONT_PAIRINGS.find((p) => p.id === pairingId);
 		if (!pairing) return;
+		setActiveFont(pairing.id);
 		setCustomTokens({
 			fontHeading: pairing.headingFontVar,
 			fontBody: pairing.bodyFontVar,
 		});
-		setActiveFont(pairing.id);
 	};
 
 	const applyCustomFont = (
-		fontItem: FontsourceItem,
+		fontName: string,
 		target: "heading" | "body" | "both",
 	) => {
-		loadFontsourceFont(fontItem.id);
-		const formatted = `"${fontItem.family}", ${fontItem.category}`;
-		if (target === "heading") {
-			setCustomTokens({ fontHeading: formatted });
-		} else if (target === "body") {
-			setCustomTokens({ fontBody: formatted });
+		const fontValue = `'${fontName}', sans-serif`;
+		if (typeof document !== "undefined") {
+			const linkId = `google-font-${fontName.toLowerCase().replace(/\s+/g, "-")}`;
+			if (!document.getElementById(linkId)) {
+				const link = document.createElement("link");
+				link.id = linkId;
+				link.rel = "stylesheet";
+				link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, "+")}:wght@400;500;600;700&display=swap`;
+				document.head.appendChild(link);
+			}
+		}
+
+		if (target === "both") {
+			setCustomTokens({
+				fontHeading: fontValue,
+				fontBody: fontValue,
+			});
+		} else if (target === "heading") {
+			setCustomTokens({
+				fontHeading: fontValue,
+			});
 		} else {
-			setCustomTokens({ fontHeading: formatted, fontBody: formatted });
+			setCustomTokens({
+				fontBody: fontValue,
+			});
 		}
 		setActiveFont("custom");
 	};
 
-	const handlePublishGlobalTheme = async (e: React.FormEvent) => {
+	const updateToken = (key: string, val: string) => {
+		setCustomTokens({ [key]: val });
+	};
+
+	const toggleTactile = () => {
+		const nextVal = tokens.tactile === "true" ? "false" : "true";
+		setCustomTokens({ tactile: nextVal });
+	};
+
+	const applyShadowPreset = (presetId: string) => {
+		const preset = SHADOW_PRESETS.find((p) => p.id === presetId);
+		if (!preset) return;
+
+		if (preset.isGlow) {
+			const glowVals = getGlowValues(
+				tokens.glowColor || tokens.primary || "#38BDF8",
+			);
+			setCustomTokens({
+				shadow: glowVals.value,
+				shadowSm: glowVals.sm,
+				shadowLg: glowVals.lg,
+			});
+			return;
+		}
+
+		setCustomTokens({
+			shadow: preset.value,
+			shadowSm: preset.sm,
+			shadowLg: preset.lg,
+		});
+	};
+
+	const handleGlowColorChange = (hexOrType: string) => {
+		let colorHex = hexOrType;
+		if (hexOrType === "primary") colorHex = tokens.primary || "#38BDF8";
+		else if (hexOrType === "accent") colorHex = tokens.accent || "#34D399";
+
+		const glowVals = getGlowValues(colorHex);
+		setCustomTokens({
+			glowColor: colorHex,
+			shadow: glowVals.value,
+			shadowSm: glowVals.sm,
+			shadowLg: glowVals.lg,
+		});
+	};
+
+	const handleSaveGlobalTheme = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!adminPassword.trim()) {
 			setPublishFeedback({
 				type: "error",
-				message: "Please enter your admin password.",
+				message: "Admin password is required.",
 			});
 			return;
 		}
+
 		setIsPublishing(true);
 		setPublishFeedback(null);
+
 		try {
-			// Copy config to clipboard as well for easy developer export
-			if (typeof navigator !== "undefined" && navigator.clipboard) {
-				await navigator.clipboard.writeText(JSON.stringify(tokens, null, 2));
+			const res = await fetch("/api/admin/theme", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					tokens,
+					presetId: theme,
+					adminPassword,
+				}),
+			});
+
+			const data = await res.json();
+			if (!res.ok) {
+				throw new Error(data.error || "Failed to update global theme");
 			}
+
 			setPublishFeedback({
 				type: "success",
-				message:
-					"Theme successfully deployed as Global Default! (JSON copied to clipboard)",
+				message: "Global theme updated successfully in database!",
 			});
-			setAdminPassword("");
 			setTimeout(() => {
 				setShowGlobalModal(false);
 				setPublishFeedback(null);
-			}, 1800);
-		} catch {
+				setAdminPassword("");
+			}, 1500);
+		} catch (err: unknown) {
 			setPublishFeedback({
 				type: "error",
-				message: "Failed to publish global theme.",
+				message: err instanceof Error ? err.message : "Network error occurred",
 			});
 		} finally {
 			setIsPublishing(false);
@@ -369,18 +428,6 @@ body [data-colorshot-popover] {
 		setActiveFont("ibm-noto");
 	};
 
-	const currentPresetObj =
-		themes.find((p) => p.id === theme) ||
-		themes.find((p) => p.id === "dark-slate") ||
-		themes[0];
-
-	const isLight =
-		resolvedMode === "light" ||
-		(tokens.canvas &&
-			(tokens.canvas.toLowerCase().startsWith("#f") ||
-				tokens.canvas.toLowerCase() === "#ffffff" ||
-				tokens.canvas.toLowerCase().startsWith("#fa")));
-
 	return (
 		<div
 			data-lenis-prevent="true"
@@ -388,6 +435,16 @@ body [data-colorshot-popover] {
 			className={`fixed inset-0 z-[100] flex justify-end bg-black/60 backdrop-blur-sm transition-opacity duration-200 cursor-pointer ${
 				isVisible ? "opacity-100" : "opacity-0"
 			}`}
+			style={{
+				position: "fixed",
+				top: 0,
+				right: 0,
+				bottom: 0,
+				left: 0,
+				zIndex: 99999,
+				display: "flex",
+				justifyContent: "flex-end",
+			}}
 		>
 			<div
 				data-lenis-prevent="true"
@@ -396,30 +453,54 @@ body [data-colorshot-popover] {
 					isVisible ? "translate-x-0" : "translate-x-full"
 				}`}
 				style={{
+					width: "100%",
+					maxWidth: "490px",
+					minWidth: "320px",
+					height: "100%",
+					display: "flex",
+					flexDirection: "column",
 					backgroundColor: tokens.surface,
 					color: tokens.textPrimary,
+					borderLeft: `1px solid ${tokens.border || "var(--border)"}`,
+					boxShadow: "-10px 0 25px -5px rgba(0, 0, 0, 0.4)",
 				}}
 			>
 				{/* FIXED SHEET HEADER */}
 				<div
 					className="p-4 sm:p-5 border-b border-border shrink-0 flex items-center justify-between z-10"
-					style={{ backgroundColor: tokens.surface }}
+					style={{
+						backgroundColor: tokens.surface,
+						padding: "16px 20px",
+						borderBottom: `1px solid ${tokens.border || "var(--border)"}`,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+						flexShrink: 0,
+					}}
 				>
-					<div className="flex items-center gap-2.5">
+					<div
+						className="flex items-center gap-2.5"
+						style={{ display: "flex", alignItems: "center", gap: "10px" }}
+					>
 						<div
 							className="p-2 rounded-btn"
 							style={{
 								backgroundColor: tokens.card,
 								color: tokens.primary,
+								padding: "8px",
+								borderRadius: tokens.radius,
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
 							}}
 						>
 							<HugeiconsIcon icon={PaintBoardIcon} size={20} />
 						</div>
 						<div>
-							<h3 className="font-semibold text-base tracking-tight font-heading">
+							<h3 className="font-semibold text-base tracking-tight font-heading m-0">
 								Theme Studio
 							</h3>
-							<p className="text-xs" style={{ color: tokens.textMuted }}>
+							<p className="text-xs m-0" style={{ color: tokens.textMuted }}>
 								Live Tailwind v4 variable inspector
 							</p>
 						</div>
@@ -427,7 +508,14 @@ body [data-colorshot-popover] {
 					<button
 						type="button"
 						onClick={closeStudio}
-						className="p-1.5 rounded-btn hover:bg-card transition-colors cursor-pointer"
+						className="p-1.5 rounded-btn hover:bg-card transition-colors cursor-pointer border-0 bg-transparent"
+						style={{
+							color: tokens.textPrimary,
+							cursor: "pointer",
+							background: "transparent",
+							border: "none",
+							padding: "6px",
+						}}
 						aria-label="Close Theme Studio"
 					>
 						<HugeiconsIcon icon={Cancel01Icon} size={20} />
@@ -439,17 +527,36 @@ body [data-colorshot-popover] {
 					data-lenis-prevent="true"
 					onWheel={(e) => e.stopPropagation()}
 					className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-6 min-h-0 overscroll-contain"
+					style={{
+						flex: 1,
+						overflowY: "auto",
+						padding: "20px",
+						display: "flex",
+						flexDirection: "column",
+						gap: "24px",
+					}}
 				>
 					{/* SECTION 1: PALETTES & PRESETS */}
 					<div>
 						<label
 							className="text-xs font-semibold tracking-wider uppercase block mb-2.5"
-							style={{ color: tokens.textMuted }}
+							style={{
+								color: tokens.textMuted,
+								display: "block",
+								marginBottom: "10px",
+							}}
 						>
 							Palettes &amp; Presets
 						</label>
-						<div className="grid grid-cols-2 gap-2">
-							{themes.map((p) => {
+						<div
+							className="grid grid-cols-2 gap-2"
+							style={{
+								display: "grid",
+								gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+								gap: "8px",
+							}}
+						>
+							{themes.map((p: ThemeDefinition<BaseTokens>) => {
 								const isSelected = theme === p.id;
 								const previewColors =
 									isLight && p.lightTokens
@@ -466,9 +573,26 @@ body [data-colorshot-popover] {
 												? "border-primary ring-1 ring-primary"
 												: "border-border hover:border-text-muted"
 										}`}
-										style={{ backgroundColor: tokens.card }}
+										style={{
+											backgroundColor: tokens.card,
+											borderRadius: tokens.radius,
+											padding: "12px",
+											display: "flex",
+											flexDirection: "column",
+											justifyContent: "space-between",
+											minHeight: "56px",
+											textAlign: "left",
+										}}
 									>
-										<div className="flex items-center justify-between mb-2">
+										<div
+											className="flex items-center justify-between mb-2"
+											style={{
+												display: "flex",
+												alignItems: "center",
+												justifyContent: "space-between",
+												marginBottom: "8px",
+											}}
+										>
 											<span className="font-semibold font-heading">
 												{p.name}
 											</span>
@@ -480,22 +604,65 @@ body [data-colorshot-popover] {
 												/>
 											)}
 										</div>
-										<div className="flex items-center gap-1.5">
+										<div
+											className="flex items-center gap-1.5"
+											style={{
+												display: "flex",
+												alignItems: "center",
+												gap: "6px",
+											}}
+										>
 											<span
 												className="w-3.5 h-3.5 rounded-full border border-border/40 shadow-xs"
-												style={{ backgroundColor: previewColors.canvas }}
+												style={{
+													width: "14px",
+													height: "14px",
+													minWidth: "14px",
+													minHeight: "14px",
+													borderRadius: "9999px",
+													backgroundColor: previewColors.canvas,
+													display: "inline-block",
+													flexShrink: 0,
+												}}
 											/>
 											<span
 												className="w-3.5 h-3.5 rounded-full border border-border/40 shadow-xs"
-												style={{ backgroundColor: previewColors.primary }}
+												style={{
+													width: "14px",
+													height: "14px",
+													minWidth: "14px",
+													minHeight: "14px",
+													borderRadius: "9999px",
+													backgroundColor: previewColors.primary,
+													display: "inline-block",
+													flexShrink: 0,
+												}}
 											/>
 											<span
 												className="w-3.5 h-3.5 rounded-full border border-border/40 shadow-xs"
-												style={{ backgroundColor: previewColors.secondary }}
+												style={{
+													width: "14px",
+													height: "14px",
+													minWidth: "14px",
+													minHeight: "14px",
+													borderRadius: "9999px",
+													backgroundColor: previewColors.secondary,
+													display: "inline-block",
+													flexShrink: 0,
+												}}
 											/>
 											<span
 												className="w-3.5 h-3.5 rounded-full border border-border/40 shadow-xs"
-												style={{ backgroundColor: previewColors.accent }}
+												style={{
+													width: "14px",
+													height: "14px",
+													minWidth: "14px",
+													minHeight: "14px",
+													borderRadius: "9999px",
+													backgroundColor: previewColors.accent,
+													display: "inline-block",
+													flexShrink: 0,
+												}}
 											/>
 										</div>
 									</button>
@@ -505,16 +672,36 @@ body [data-colorshot-popover] {
 					</div>
 
 					{/* SECTION 2: TYPOGRAPHY SYSTEM */}
-					<div className="mt-6">
-						<div className="flex items-center justify-between mb-2.5">
+					<div className="mt-6" style={{ marginTop: "24px" }}>
+						<div
+							className="flex items-center justify-between mb-2.5"
+							style={{
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "space-between",
+								marginBottom: "10px",
+							}}
+						>
 							<label
 								className="text-xs font-semibold tracking-wider uppercase flex items-center gap-1.5"
-								style={{ color: tokens.textMuted }}
+								style={{
+									color: tokens.textMuted,
+									display: "flex",
+									alignItems: "center",
+									gap: "6px",
+								}}
 							>
 								<HugeiconsIcon icon={TextFontIcon} size={16} />
 								Typography System
 							</label>
-							<span className="text-[10px] font-mono px-2 py-0.5 rounded-badge bg-primary/10 text-primary border border-primary/20">
+							<span
+								className="text-[10px] font-mono px-2 py-0.5 rounded-badge bg-primary/10 text-primary border border-primary/20"
+								style={{
+									padding: "2px 8px",
+									borderRadius: "9999px",
+									fontSize: "10px",
+								}}
+							>
 								{activeFont === "custom" ? "Custom Google Font" : "Preset"}
 							</span>
 						</div>
@@ -526,24 +713,61 @@ body [data-colorshot-popover] {
 									? "border-primary ring-1 ring-primary"
 									: "border-border"
 							}`}
-							style={{ backgroundColor: tokens.card }}
+							style={{
+								backgroundColor: tokens.card,
+								borderRadius: tokens.radius,
+								padding: "10px 12px",
+								marginBottom: "12px",
+								display: "flex",
+								flexDirection: "column",
+								gap: "6px",
+							}}
 						>
-							<div className="flex items-center justify-between">
-								<div className="flex items-center gap-1.5">
+							<div
+								className="flex items-center justify-between"
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "space-between",
+								}}
+							>
+								<div
+									className="flex items-center gap-1.5"
+									style={{ display: "flex", alignItems: "center", gap: "6px" }}
+								>
 									<span style={{ color: tokens.textMuted }}>Heading Font:</span>
 									<span className="font-semibold text-primary font-mono text-[11px]">
 										{extractFontFamily(tokens.fontHeading)}
 									</span>
 								</div>
 								{activeFont === "custom" && (
-									<span className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+									<span
+										className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20"
+										style={{
+											display: "inline-flex",
+											alignItems: "center",
+											gap: "4px",
+											padding: "2px 8px",
+											borderRadius: "9999px",
+										}}
+									>
 										<HugeiconsIcon icon={CheckmarkBadge01Icon} size={12} />
 										Active Custom Font
 									</span>
 								)}
 							</div>
-							<div className="flex items-center justify-between">
-								<div className="flex items-center gap-1.5">
+							<div
+								className="flex items-center justify-between"
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "space-between",
+								}}
+							>
+								<div
+									className="flex items-center gap-1.5"
+									style={{ display: "flex", alignItems: "center", gap: "6px" }}
+								>
 									<span style={{ color: tokens.textMuted }}>Body Font:</span>
 									<span className="font-semibold text-secondary font-mono text-[11px]">
 										{extractFontFamily(tokens.fontBody)}
@@ -553,7 +777,15 @@ body [data-colorshot-popover] {
 						</div>
 
 						{/* Preset Pairings */}
-						<div className="space-y-2 mb-3">
+						<div
+							className="space-y-2 mb-3"
+							style={{
+								display: "flex",
+								flexDirection: "column",
+								gap: "8px",
+								marginBottom: "12px",
+							}}
+						>
 							{FONT_PAIRINGS.map((f) => {
 								const isSelected = activeFont === f.id;
 								return (
@@ -566,12 +798,21 @@ body [data-colorshot-popover] {
 												? "border-primary ring-1 ring-primary"
 												: "border-border hover:border-text-muted"
 										}`}
-										style={{ backgroundColor: tokens.card }}
+										style={{
+											backgroundColor: tokens.card,
+											borderRadius: tokens.radius,
+											padding: "10px 14px",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "space-between",
+											width: "100%",
+											textAlign: "left",
+										}}
 									>
 										<div>
-											<p className="font-medium">{f.name}</p>
+											<p className="font-medium m-0">{f.name}</p>
 											<p
-												className="text-[11px]"
+												className="text-[11px] m-0"
 												style={{ color: tokens.textMuted }}
 											>
 												UI: {f.headingName} • Body: {f.bodyName}
@@ -595,179 +836,187 @@ body [data-colorshot-popover] {
 							style={{
 								backgroundColor: tokens.card,
 								borderColor: tokens.border,
+								borderRadius: tokens.radius,
 							}}
 						>
 							<button
 								type="button"
 								onClick={() => setShowGoogleFonts(!showGoogleFonts)}
-								className="w-full px-3.5 py-2.5 flex items-center justify-between text-xs font-medium cursor-pointer hover:bg-white/5 transition-colors"
+								className="w-full px-3.5 py-2.5 text-xs font-medium flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer border-0 bg-transparent text-left"
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "space-between",
+									padding: "10px 14px",
+									width: "100%",
+									color: tokens.textPrimary,
+								}}
 							>
-								<div className="flex items-center gap-2 text-text-primary">
+								<div
+									className="flex items-center gap-2"
+									style={{ display: "flex", alignItems: "center", gap: "8px" }}
+								>
 									<HugeiconsIcon
-										icon={SparklesIcon}
-										size={15}
+										icon={Search01Icon}
+										size={14}
 										className="text-primary"
 									/>
-									<span>Explore 1,900+ Google Fonts</span>
+									<span>Search &amp; Explore Google Fonts</span>
 								</div>
-								<span className="text-[10px] font-mono px-2 py-0.5 rounded-badge bg-primary/10 text-primary">
-									{showGoogleFonts ? "Collapse" : "Open API Explorer"}
+								<span className="text-[10px] text-primary underline">
+									{showGoogleFonts ? "Close" : "Open"}
 								</span>
 							</button>
 
 							{showGoogleFonts && (
-								<div className="p-3 border-t border-border/80 space-y-3">
-									{/* Search Input */}
-									<div className="relative">
-										<HugeiconsIcon
-											icon={Search01Icon}
-											size={14}
-											className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-										/>
+								<div
+									className="p-3 border-t border-border space-y-3"
+									style={{
+										padding: "12px",
+										borderTop: `1px solid ${tokens.border || "var(--border)"}`,
+										display: "flex",
+										flexDirection: "column",
+										gap: "12px",
+									}}
+								>
+									<div
+										className="flex gap-2"
+										style={{ display: "flex", gap: "8px" }}
+									>
 										<input
 											type="text"
+											placeholder="Search Google Font..."
 											value={fontSearch}
 											onChange={(e) => setFontSearch(e.target.value)}
-											placeholder="Search Google Fonts (e.g. Outfit, Space Grotesk)..."
-											className="w-full pl-8 pr-3 py-1.5 rounded-btn bg-canvas text-xs text-text-primary placeholder:text-text-muted border border-border focus:outline-none focus:border-primary font-mono"
+											className="flex-1 px-2.5 py-1.5 text-xs rounded bg-canvas border border-border text-text-primary"
+											style={{
+												flex: 1,
+												backgroundColor: tokens.canvas,
+												borderColor: tokens.border,
+												color: tokens.textPrimary,
+												padding: "6px 10px",
+												borderRadius: tokens.radius,
+											}}
+										/>
+										<select
+											value={fontCategory}
+											onChange={(e) => setFontCategory(e.target.value)}
+											className="px-2 py-1.5 text-xs rounded bg-canvas border border-border text-text-primary"
 											style={{
 												backgroundColor: tokens.canvas,
 												borderColor: tokens.border,
 												color: tokens.textPrimary,
+												padding: "6px 8px",
+												borderRadius: tokens.radius,
 											}}
-										/>
+										>
+											<option value="all">All</option>
+											<option value="sans-serif">Sans Serif</option>
+											<option value="serif">Serif</option>
+											<option value="monospace">Monospace</option>
+										</select>
 									</div>
 
-									{/* Category Tabs */}
-									<div className="flex flex-wrap gap-1">
-										{["all", "sans-serif", "monospace", "serif", "display"].map(
-											(cat) => (
-												<button
-													type="button"
-													key={cat}
-													onClick={() => setFontCategory(cat)}
-													className={`px-2 py-0.5 rounded-badge text-[10px] capitalize transition-all cursor-pointer ${
-														fontCategory === cat
-															? "bg-primary text-canvas font-medium"
-															: "bg-canvas text-text-muted hover:text-text-primary border border-border"
-													}`}
-													style={{
-														backgroundColor:
-															fontCategory === cat
-																? tokens.primary
-																: tokens.card,
-														color:
-															fontCategory === cat
-																? tokens.canvas
-																: tokens.textMuted,
-														borderColor: tokens.border,
-													}}
-												>
-													{cat}
-												</button>
-											),
-										)}
-									</div>
-
-									{/* Font List Container */}
-									<div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
+									<div
+										className="max-h-48 overflow-y-auto space-y-1.5 pr-1"
+										style={{
+											maxHeight: "192px",
+											overflowY: "auto",
+											display: "flex",
+											flexDirection: "column",
+											gap: "6px",
+										}}
+									>
 										{isLoadingFonts ? (
-											<p className="text-center py-4 text-[11px] text-text-muted font-mono animate-pulse">
-												Loading Fonts...
+											<p
+												className="text-xs text-center py-4"
+												style={{ color: tokens.textMuted }}
+											>
+												Loading fonts...
 											</p>
 										) : fontsList.length === 0 ? (
-											<p className="text-center py-4 text-[11px] text-text-muted font-mono">
-												No matching fonts found
+											<p
+												className="text-xs text-center py-4"
+												style={{ color: tokens.textMuted }}
+											>
+												No fonts found.
 											</p>
 										) : (
-											fontsList.map((f) => {
-												const currentHeading = extractFontFamily(
-													tokens.fontHeading,
-												);
-												const currentBody = extractFontFamily(tokens.fontBody);
-												const isHeading =
-													currentHeading.toLowerCase() ===
-													f.family.toLowerCase();
-												const isBody =
-													currentBody.toLowerCase() === f.family.toLowerCase();
-
-												return (
+											fontsList.map((f) => (
+												<div
+													key={f.id}
+													className="flex items-center justify-between p-2 rounded bg-surface/50 border border-border/50 text-xs"
+													style={{
+														display: "flex",
+														alignItems: "center",
+														justifyContent: "space-between",
+														padding: "8px",
+														borderRadius: tokens.radius,
+														backgroundColor: tokens.surface,
+													}}
+												>
+													<div>
+														<span className="font-medium block">
+															{f.family}
+														</span>
+														<span
+															className="text-[10px] capitalize"
+															style={{ color: tokens.textMuted }}
+														>
+															{f.category}
+														</span>
+													</div>
 													<div
-														key={f.id}
-														className="flex items-center justify-between p-2 rounded-btn bg-canvas/80 border border-border/70 hover:border-border text-xs"
+														className="flex items-center gap-1"
 														style={{
-															backgroundColor: tokens.card,
-															borderColor: tokens.border,
+															display: "flex",
+															alignItems: "center",
+															gap: "4px",
 														}}
 													>
-														<div className="truncate mr-2">
-															<p className="font-medium truncate text-text-primary">
-																{f.family}
-															</p>
-															<span className="text-[9px] text-text-muted font-mono capitalize">
-																{f.category}
-															</span>
-														</div>
-														<div className="flex items-center gap-1 shrink-0">
-															<button
-																type="button"
-																onClick={() => applyCustomFont(f, "heading")}
-																title="Set as Heading Font"
-																className={`px-2 py-1 rounded-badge text-[10px] font-mono transition-colors cursor-pointer ${
-																	isHeading
-																		? "bg-primary text-canvas font-bold"
-																		: "bg-card text-text-muted hover:text-primary border border-border"
-																}`}
-																style={{
-																	backgroundColor: isHeading
-																		? tokens.primary
-																		: tokens.canvas,
-																	color: isHeading
-																		? tokens.canvas
-																		: tokens.textMuted,
-																	borderColor: tokens.border,
-																}}
-															>
-																H
-															</button>
-															<button
-																type="button"
-																onClick={() => applyCustomFont(f, "body")}
-																title="Set as Body Font"
-																className={`px-2 py-1 rounded-badge text-[10px] font-mono transition-colors cursor-pointer ${
-																	isBody
-																		? "bg-secondary text-canvas font-bold"
-																		: "bg-card text-text-muted hover:text-secondary border border-border"
-																}`}
-																style={{
-																	backgroundColor: isBody
-																		? tokens.secondary
-																		: tokens.canvas,
-																	color: isBody
-																		? tokens.canvas
-																		: tokens.textMuted,
-																	borderColor: tokens.border,
-																}}
-															>
-																B
-															</button>
-															<button
-																type="button"
-																onClick={() => applyCustomFont(f, "both")}
-																title="Set for Both"
-																className="px-2 py-1 rounded-badge text-[10px] font-mono bg-card text-text-muted hover:text-text-primary border border-border transition-colors cursor-pointer"
-																style={{
-																	backgroundColor: tokens.canvas,
-																	color: tokens.textMuted,
-																	borderColor: tokens.border,
-																}}
-															>
-																Both
-															</button>
-														</div>
+														<button
+															type="button"
+															onClick={() =>
+																applyCustomFont(f.family, "heading")
+															}
+															className="px-2 py-0.5 text-[10px] rounded border border-border hover:bg-primary/20 text-primary cursor-pointer"
+															title="Apply to Headings"
+															style={{
+																padding: "2px 6px",
+																borderRadius: "4px",
+															}}
+														>
+															H
+														</button>
+														<button
+															type="button"
+															onClick={() => applyCustomFont(f.family, "body")}
+															className="px-2 py-0.5 text-[10px] rounded border border-border hover:bg-secondary/20 text-secondary cursor-pointer"
+															title="Apply to Body"
+															style={{
+																padding: "2px 6px",
+																borderRadius: "4px",
+															}}
+														>
+															B
+														</button>
+														<button
+															type="button"
+															onClick={() => applyCustomFont(f.family, "both")}
+															className="px-2 py-0.5 text-[10px] rounded bg-primary text-canvas font-medium cursor-pointer"
+															title="Apply to Both"
+															style={{
+																padding: "2px 6px",
+																borderRadius: "4px",
+																backgroundColor: tokens.primary,
+																color: tokens.canvas,
+															}}
+														>
+															Both
+														</button>
 													</div>
-												);
-											})
+												</div>
+											))
 										)}
 									</div>
 								</div>
@@ -776,24 +1025,41 @@ body [data-colorshot-popover] {
 					</div>
 
 					{/* SECTION 3: SURFACES & ACCENTS */}
-					<div className="mt-6">
+					<div className="mt-6" style={{ marginTop: "24px" }}>
 						<label
 							className="text-xs font-semibold tracking-wider uppercase block mb-2.5"
-							style={{ color: tokens.textMuted }}
+							style={{
+								color: tokens.textMuted,
+								display: "block",
+								marginBottom: "10px",
+							}}
 						>
 							Surfaces &amp; Accents
 						</label>
-						<div className="space-y-2.5 text-xs">
+						<div
+							className="space-y-2.5 text-xs"
+							style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+						>
 							{[
 								{
 									key: "canvas" as const,
-									label: "Canvas Background",
+									label: "App Background / Canvas",
 									title: "Canvas Background",
 								},
 								{
 									key: "surface" as const,
-									label: "Elevated Surface",
-									title: "Elevated Surface",
+									label: "Sheet Surface / Menus",
+									title: "Surface Elevation",
+								},
+								{
+									key: "card" as const,
+									label: "Card / Panel Surface",
+									title: "Card Elevation",
+								},
+								{
+									key: "border" as const,
+									label: "Border / Dividers",
+									title: "Border Stroke",
 								},
 								{
 									key: "primary" as const,
@@ -832,16 +1098,38 @@ body [data-colorshot-popover] {
 									<div
 										key={key}
 										className="flex items-center justify-between p-2.5 rounded-card border border-border"
-										style={{ backgroundColor: tokens.card }}
+										style={{
+											backgroundColor: tokens.card,
+											borderRadius: tokens.radius,
+											padding: "10px 14px",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "space-between",
+										}}
 									>
 										<span>{label}</span>
-										<div className="flex items-center gap-2">
+										<div
+											className="flex items-center gap-2"
+											style={{
+												display: "flex",
+												alignItems: "center",
+												gap: "8px",
+											}}
+										>
 											{isCustomized && originalColor ? (
 												<button
 													type="button"
 													onClick={() => updateToken(key, originalColor)}
 													title={`Reset to ${currentPresetObj.name} default (${originalColor})`}
-													className="p-1 rounded hover:bg-white/10 text-primary transition-colors cursor-pointer flex items-center justify-center"
+													className="p-1 rounded hover:bg-white/10 text-primary transition-colors cursor-pointer flex items-center justify-center border-0 bg-transparent"
+													style={{
+														padding: "4px",
+														borderRadius: "4px",
+														cursor: "pointer",
+														background: "transparent",
+														border: "none",
+														color: tokens.primary,
+													}}
 												>
 													<HugeiconsIcon icon={RotateLeft01Icon} size={13} />
 												</button>
@@ -850,7 +1138,7 @@ body [data-colorshot-popover] {
 												{tokens[key]}
 											</span>
 											<ColorPickerField
-												value={tokens[key]}
+												value={tokens[key] || "#38BDF8"}
 												onChange={(val) => updateToken(key, val)}
 												title={title}
 											/>
@@ -862,8 +1150,19 @@ body [data-colorshot-popover] {
 					</div>
 
 					{/* SECTION 4: CARD CORNER RADIUS */}
-					<div className="mt-6 pb-2">
-						<div className="flex items-center justify-between text-xs mb-2">
+					<div
+						className="mt-6 pb-2"
+						style={{ marginTop: "24px", paddingBottom: "8px" }}
+					>
+						<div
+							className="flex items-center justify-between text-xs mb-2"
+							style={{
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "space-between",
+								marginBottom: "8px",
+							}}
+						>
 							<span
 								className="font-semibold tracking-wider uppercase"
 								style={{ color: tokens.textMuted }}
@@ -874,8 +1173,15 @@ body [data-colorshot-popover] {
 								{tokens.radius}
 							</span>
 						</div>
-						<div className="grid grid-cols-6 gap-1">
-							{DEFINED_RADIUS_OPTIONS.map((rad) => {
+						<div
+							className="grid grid-cols-6 gap-1"
+							style={{
+								display: "grid",
+								gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+								gap: "4px",
+							}}
+						>
+							{DEFINED_RADIUS_OPTIONS.map((rad: string) => {
 								const isSelected =
 									tokens.radius === rad ||
 									(rad === "0rem" &&
@@ -895,6 +1201,12 @@ body [data-colorshot-popover] {
 										style={{
 											backgroundColor: tokens.card,
 											borderRadius: rad,
+											padding: "8px 0",
+											textAlign: "center",
+											cursor: "pointer",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
 										}}
 									>
 										{rad}
@@ -905,9 +1217,27 @@ body [data-colorshot-popover] {
 					</div>
 
 					{/* SECTION 5: TACTICAL EFFECT (TACTILE PHYSICS) */}
-					<div className="mt-6 pt-5 border-t border-border">
-						<div className="flex items-center justify-between text-xs mb-2">
-							<div className="flex items-center gap-1.5">
+					<div
+						className="mt-6 pt-5 border-t border-border"
+						style={{
+							marginTop: "24px",
+							paddingTop: "20px",
+							borderTop: `1px solid ${tokens.border || "var(--border)"}`,
+						}}
+					>
+						<div
+							className="flex items-center justify-between text-xs mb-2"
+							style={{
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "space-between",
+								marginBottom: "8px",
+							}}
+						>
+							<div
+								className="flex items-center gap-1.5"
+								style={{ display: "flex", alignItems: "center", gap: "6px" }}
+							>
 								<span
 									className="font-semibold tracking-wider uppercase"
 									style={{ color: tokens.textMuted }}
@@ -923,26 +1253,53 @@ body [data-colorshot-popover] {
 										? "border-primary bg-primary/20 text-primary ring-1 ring-primary"
 										: "border-border text-text-muted hover:border-text-muted"
 								}`}
+								style={{
+									padding: "4px 10px",
+									borderRadius: "9999px",
+									fontSize: "11px",
+									cursor: "pointer",
+								}}
 							>
 								{tokens.tactile === "true" ? "ACTIVE" : "DISABLED"}
 							</button>
 						</div>
 						<p
 							className="text-[11px] leading-relaxed mb-3"
-							style={{ color: tokens.textMuted }}
+							style={{
+								color: tokens.textMuted,
+								fontSize: "11px",
+								marginBottom: "12px",
+							}}
 						>
 							Mechanical 2px hover displacement &amp; 4px active press click
 							physics on buttons &amp; cards.
 						</p>
 						<div
 							className="p-3.5 rounded-card border border-border space-y-2.5"
-							style={{ backgroundColor: tokens.card }}
+							style={{
+								backgroundColor: tokens.card,
+								borderRadius: tokens.radius,
+								padding: "14px",
+								display: "flex",
+								flexDirection: "column",
+								gap: "10px",
+							}}
 						>
-							<div className="flex items-center justify-between text-xs">
+							<div
+								className="flex items-center justify-between text-xs"
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "space-between",
+								}}
+							>
 								<span className="font-medium text-text-primary">
 									Interactive Physics Test
 								</span>
-								<span className="text-[10px] font-mono px-2 py-0.5 rounded-badge bg-primary/10 text-primary border border-primary/20">
+								<span
+									className="text-[10px] font-mono px-2 py-0.5 rounded-badge bg-primary/10 text-primary border border-primary/20"
+									style={{ padding: "2px 8px", borderRadius: "9999px" }}
+								>
 									{tactileClicks > 0
 										? `${tactileClicks} Click${tactileClicks > 1 ? "s" : ""} Registered`
 										: "Ready to Test"}
@@ -969,6 +1326,9 @@ body [data-colorshot-popover] {
 										? tokens.accent
 										: tokens.primary,
 									color: tokens.canvas,
+									width: "100%",
+									padding: "8px 12px",
+									cursor: "pointer",
 								}}
 							>
 								{showClickFeedback
@@ -979,8 +1339,23 @@ body [data-colorshot-popover] {
 					</div>
 
 					{/* SECTION 6: ELEVATION & SHADOWS */}
-					<div className="mt-6 pt-5 border-t border-border">
-						<div className="flex items-center justify-between text-xs mb-2">
+					<div
+						className="mt-6 pt-5 border-t border-border"
+						style={{
+							marginTop: "24px",
+							paddingTop: "20px",
+							borderTop: `1px solid ${tokens.border || "var(--border)"}`,
+						}}
+					>
+						<div
+							className="flex items-center justify-between text-xs mb-2"
+							style={{
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "space-between",
+								marginBottom: "8px",
+							}}
+						>
 							<span
 								className="font-semibold tracking-wider uppercase"
 								style={{ color: tokens.textMuted }}
@@ -996,7 +1371,15 @@ body [data-colorshot-popover] {
 						</div>
 
 						{/* Shadow Presets Grid */}
-						<div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+						<div
+							className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3"
+							style={{
+								display: "grid",
+								gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+								gap: "8px",
+								marginBottom: "12px",
+							}}
+						>
 							{SHADOW_PRESETS.map((p) => {
 								const isSelected =
 									p.value === tokens.shadow ||
@@ -1011,7 +1394,16 @@ body [data-colorshot-popover] {
 												? "border-primary ring-1 ring-primary font-bold text-primary"
 												: "border-border hover:border-text-muted text-text-muted"
 										}`}
-										style={{ backgroundColor: tokens.card }}
+										style={{
+											backgroundColor: tokens.card,
+											borderRadius: tokens.radius,
+											padding: "8px",
+											height: "56px",
+											display: "flex",
+											flexDirection: "column",
+											justifyContent: "space-between",
+											textAlign: "left",
+										}}
 									>
 										<span className="truncate">{p.label}</span>
 										<span className="text-[9px] font-mono opacity-60 truncate">
@@ -1029,13 +1421,31 @@ body [data-colorshot-popover] {
 						{/* Glow Color Customizer */}
 						<div
 							className="p-3 rounded-card border border-border space-y-2 mb-3"
-							style={{ backgroundColor: tokens.card }}
+							style={{
+								backgroundColor: tokens.card,
+								borderRadius: tokens.radius,
+								padding: "12px",
+								display: "flex",
+								flexDirection: "column",
+								gap: "8px",
+								marginBottom: "12px",
+							}}
 						>
-							<div className="flex items-center justify-between text-xs">
+							<div
+								className="flex items-center justify-between text-xs"
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "space-between",
+								}}
+							>
 								<span className="font-medium text-text-primary">
 									Neon Glow Color
 								</span>
-								<div className="flex items-center gap-1.5">
+								<div
+									className="flex items-center gap-1.5"
+									style={{ display: "flex", alignItems: "center", gap: "6px" }}
+								>
 									<span className="text-[10px] font-mono text-text-muted">
 										{tokens.glowColor || "#38BDF8"}
 									</span>
@@ -1047,13 +1457,16 @@ body [data-colorshot-popover] {
 									/>
 								</div>
 							</div>
-							<div className="flex flex-wrap gap-1.5">
+							<div
+								className="flex flex-wrap gap-1.5"
+								style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}
+							>
 								{GLOW_COLOR_CHIPS.map((chip) => {
 									const chipHex =
 										chip.color === "primary"
-											? tokens.primary
+											? tokens.primary || "#38BDF8"
 											: chip.color === "accent"
-												? tokens.accent
+												? tokens.accent || "#34D399"
 												: chip.color;
 									const isActive = tokens.glowColor === chipHex;
 									return (
@@ -1066,10 +1479,25 @@ body [data-colorshot-popover] {
 													? "border-primary text-primary font-bold ring-1 ring-primary"
 													: "border-border text-text-muted hover:border-text-muted"
 											}`}
+											style={{
+												display: "inline-flex",
+												alignItems: "center",
+												gap: "4px",
+												padding: "2px 8px",
+												borderRadius: "9999px",
+												cursor: "pointer",
+											}}
 										>
 											<span
 												className="w-2 h-2 rounded-full inline-block"
-												style={{ backgroundColor: chipHex }}
+												style={{
+													width: "8px",
+													height: "8px",
+													borderRadius: "9999px",
+													backgroundColor: chipHex,
+													display: "inline-block",
+													flexShrink: 0,
+												}}
 											/>
 											<span>{chip.label}</span>
 										</button>
@@ -1085,6 +1513,9 @@ body [data-colorshot-popover] {
 								backgroundColor: tokens.card,
 								boxShadow: tokens.shadow || "none",
 								borderRadius: tokens.radius,
+								padding: "14px",
+								margin: "12px 0",
+								textAlign: "center",
 							}}
 						>
 							<span className="text-xs font-medium block text-text-primary">
@@ -1104,7 +1535,14 @@ body [data-colorshot-popover] {
 								onClick={() =>
 									setShowCustomShadowInputs(!showCustomShadowInputs)
 								}
-								className="text-[11px] font-mono text-primary hover:underline cursor-pointer flex items-center gap-1"
+								className="text-[11px] font-mono text-primary hover:underline cursor-pointer flex items-center gap-1 border-0 bg-transparent p-0"
+								style={{
+									cursor: "pointer",
+									background: "transparent",
+									border: "none",
+									padding: 0,
+									color: tokens.primary,
+								}}
 							>
 								<span>
 									{showCustomShadowInputs
@@ -1113,7 +1551,17 @@ body [data-colorshot-popover] {
 								</span>
 							</button>
 							{showCustomShadowInputs && (
-								<div className="space-y-2 mt-2 pt-2 border-t border-border">
+								<div
+									className="space-y-2 mt-2 pt-2 border-t border-border"
+									style={{
+										marginTop: "8px",
+										paddingTop: "8px",
+										borderTop: `1px solid ${tokens.border || "var(--border)"}`,
+										display: "flex",
+										flexDirection: "column",
+										gap: "8px",
+									}}
+								>
 									<div>
 										<span className="text-[10px] font-mono text-text-muted block">
 											--shadow
@@ -1128,6 +1576,9 @@ body [data-colorshot-popover] {
 												backgroundColor: tokens.canvas,
 												borderColor: tokens.border,
 												color: tokens.textPrimary,
+												width: "100%",
+												padding: "4px 8px",
+												borderRadius: tokens.radius,
 											}}
 										/>
 									</div>
@@ -1145,6 +1596,9 @@ body [data-colorshot-popover] {
 												backgroundColor: tokens.canvas,
 												borderColor: tokens.border,
 												color: tokens.textPrimary,
+												width: "100%",
+												padding: "4px 8px",
+												borderRadius: tokens.radius,
 											}}
 										/>
 									</div>
@@ -1162,6 +1616,9 @@ body [data-colorshot-popover] {
 												backgroundColor: tokens.canvas,
 												borderColor: tokens.border,
 												color: tokens.textPrimary,
+												width: "100%",
+												padding: "4px 8px",
+												borderRadius: tokens.radius,
 											}}
 										/>
 									</div>
@@ -1174,14 +1631,41 @@ body [data-colorshot-popover] {
 				{/* FIXED SHEET FOOTER */}
 				<div
 					className="p-4 border-t border-border shrink-0 flex flex-col gap-2.5 z-10"
-					style={{ backgroundColor: tokens.surface }}
+					style={{
+						backgroundColor: tokens.surface,
+						padding: "16px",
+						borderTop: `1px solid ${tokens.border || "var(--border)"}`,
+						display: "flex",
+						flexDirection: "column",
+						gap: "10px",
+						flexShrink: 0,
+					}}
 				>
-					<div className="grid grid-cols-3 gap-2">
+					<div
+						className="grid grid-cols-3 gap-2"
+						style={{
+							display: "grid",
+							gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+							gap: "8px",
+						}}
+					>
 						<button
 							type="button"
 							onClick={resetToDefault}
 							className="flex items-center justify-center gap-1.5 text-xs h-9 px-2 rounded-btn border border-border hover:bg-card hover:text-text-primary transition-colors cursor-pointer text-text-muted whitespace-nowrap"
 							title="Reset all settings to default theme"
+							style={{
+								height: "36px",
+								borderRadius: tokens.radius,
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								gap: "6px",
+								cursor: "pointer",
+								backgroundColor: "transparent",
+								border: `1px solid ${tokens.border || "var(--border)"}`,
+								color: tokens.textMuted,
+							}}
 						>
 							<HugeiconsIcon
 								icon={RotateLeft01Icon}
@@ -1198,28 +1682,44 @@ body [data-colorshot-popover] {
 								setPublishFeedback(null);
 								setShowGlobalModal(true);
 							}}
-							className="flex items-center justify-center gap-1.5 text-xs h-9 px-2 rounded-btn border border-border hover:border-primary/50 text-text-muted hover:text-text-primary bg-card/60 transition-all cursor-pointer whitespace-nowrap"
-							title="Promote this custom theme to Global Default"
+							className="flex items-center justify-center gap-1.5 text-xs h-9 px-2 rounded-btn border border-primary/40 text-primary hover:bg-primary/10 transition-colors cursor-pointer whitespace-nowrap"
+							title="Publish theme globally across all visitors"
+							style={{
+								height: "36px",
+								borderRadius: tokens.radius,
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								gap: "6px",
+								cursor: "pointer",
+								backgroundColor: "transparent",
+								border: `1px solid ${tokens.primary || "#38BDF8"}`,
+								color: tokens.primary,
+							}}
 						>
-							<HugeiconsIcon
-								icon={Globe02Icon}
-								size={14}
-								className="shrink-0"
-							/>
 							<span>Set Global</span>
 						</button>
 
 						<a
 							href="/admin"
-							onClick={() => closeStudio()}
-							className="flex items-center justify-center gap-1.5 text-xs h-9 px-2 rounded-btn border border-border hover:border-primary/50 text-text-muted hover:text-text-primary transition-colors font-mono whitespace-nowrap"
-							title="Open Global Theme Admin Console"
+							target="_blank"
+							rel="noreferrer"
+							className="flex items-center justify-center gap-1.5 text-xs h-9 px-2 rounded-btn border border-border hover:bg-card hover:text-text-primary transition-colors cursor-pointer text-text-muted whitespace-nowrap no-underline"
+							title="Open Full Admin Console in new tab"
+							style={{
+								height: "36px",
+								borderRadius: tokens.radius,
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								gap: "6px",
+								cursor: "pointer",
+								backgroundColor: "transparent",
+								border: `1px solid ${tokens.border || "var(--border)"}`,
+								color: tokens.textMuted,
+								textDecoration: "none",
+							}}
 						>
-							<HugeiconsIcon
-								icon={LockKeyIcon}
-								size={14}
-								className="text-primary shrink-0"
-							/>
 							<span>Admin</span>
 						</a>
 					</div>
@@ -1229,110 +1729,232 @@ body [data-colorshot-popover] {
 						onClick={closeStudio}
 						className="w-full h-10 text-xs rounded-btn font-medium font-heading transition-all active:scale-[0.99] cursor-pointer shadow-md flex items-center justify-center gap-2 whitespace-nowrap"
 						style={{
+							width: "100%",
+							height: "40px",
 							backgroundColor: tokens.primary,
 							color: tokens.canvas,
+							borderRadius: tokens.radius,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							fontWeight: 600,
+							cursor: "pointer",
+							border: "none",
 						}}
 					>
 						Apply &amp; Close
 					</button>
 				</div>
+			</div>
 
-				{/* GLOBAL THEME CONFIRMATION MODAL */}
-				{showGlobalModal && (
-					<div className="absolute inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+			{/* Global Theme Admin Auth Modal */}
+			{showGlobalModal && (
+				<div
+					data-lenis-prevent="true"
+					onClick={() => setShowGlobalModal(false)}
+					className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
+					style={{
+						position: "fixed",
+						top: 0,
+						right: 0,
+						bottom: 0,
+						left: 0,
+						zIndex: 100000,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						backgroundColor: "rgba(0,0,0,0.7)",
+						backdropFilter: "blur(4px)",
+						padding: "16px",
+					}}
+				>
+					<div
+						data-lenis-prevent="true"
+						onClick={(e) => e.stopPropagation()}
+						className="w-full max-w-sm rounded-card border border-border p-5 shadow-2xl space-y-4"
+						style={{
+							width: "100%",
+							maxWidth: "384px",
+							backgroundColor: tokens.surface,
+							color: tokens.textPrimary,
+							borderRadius: tokens.radius,
+							padding: "20px",
+							display: "flex",
+							flexDirection: "column",
+							gap: "16px",
+						}}
+					>
 						<div
-							className="w-full max-w-sm rounded-card border border-border p-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200"
-							style={{ backgroundColor: tokens.surface }}
+							className="flex items-center justify-between"
+							style={{
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "space-between",
+							}}
 						>
+							<h4 className="font-semibold text-sm font-heading m-0">
+								Publish Theme Globally
+							</h4>
 							<button
 								type="button"
-								onClick={() => {
-									setShowGlobalModal(false);
-									setPublishFeedback(null);
+								onClick={() => setShowGlobalModal(false)}
+								className="text-text-muted hover:text-text-primary border-0 bg-transparent cursor-pointer p-0"
+								style={{
+									color: tokens.textMuted,
+									cursor: "pointer",
+									background: "transparent",
+									border: "none",
 								}}
-								className="absolute top-3 right-3 p-1 rounded-badge text-text-muted hover:text-text-primary border border-border hover:border-text-muted cursor-pointer"
 							>
-								<HugeiconsIcon icon={Cancel01Icon} size={14} />
+								<HugeiconsIcon icon={Cancel01Icon} size={16} />
 							</button>
+						</div>
 
-							<div className="flex items-center gap-2 mb-2 text-primary">
-								<HugeiconsIcon icon={Globe02Icon} size={20} />
-								<h4 className="font-heading font-bold text-sm text-text-primary">
-									Set Global Default Theme
-								</h4>
-							</div>
-							<p
-								className="text-xs mb-4 leading-relaxed"
-								style={{ color: tokens.textMuted }}
-							>
-								Save your active theme settings as the global default for all
-								visitors. Enter the admin password to confirm.
-							</p>
+						<p
+							className="text-xs leading-relaxed m-0"
+							style={{ color: tokens.textMuted }}
+						>
+							This will set the current theme as the permanent global default
+							for all visiting users across the application.
+						</p>
 
-							<form onSubmit={handlePublishGlobalTheme} className="space-y-3">
+						<form
+							onSubmit={handleSaveGlobalTheme}
+							className="space-y-3"
+							style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+						>
+							<div>
+								<span
+									className="text-xs block mb-1 font-medium"
+									style={{
+										color: tokens.textMuted,
+										display: "block",
+										marginBottom: "4px",
+									}}
+								>
+									Admin Password
+								</span>
 								<div className="relative">
 									<input
 										type={showAdminPassword ? "text" : "password"}
 										value={adminPassword}
 										onChange={(e) => setAdminPassword(e.target.value)}
 										placeholder="Enter admin password..."
-										className="w-full px-3 py-2 pr-10 text-xs rounded-btn bg-canvas border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary font-mono"
+										className="w-full px-3 py-2 text-xs rounded bg-canvas border border-border text-text-primary pr-14"
 										style={{
 											backgroundColor: tokens.canvas,
 											borderColor: tokens.border,
 											color: tokens.textPrimary,
+											width: "100%",
+											padding: "8px 12px",
+											borderRadius: tokens.radius,
+											boxSizing: "border-box",
 										}}
-										required
 									/>
 									<button
 										type="button"
 										onClick={() => setShowAdminPassword(!showAdminPassword)}
-										className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary cursor-pointer"
-									>
-										<HugeiconsIcon
-											icon={showAdminPassword ? ViewOffIcon : ViewIcon}
-											size={14}
-										/>
-									</button>
-								</div>
-
-								{publishFeedback && (
-									<div
-										className={`p-2.5 rounded-btn text-xs border ${
-											publishFeedback.type === "success"
-												? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-												: "bg-red-500/10 border-red-500/30 text-red-400"
-										}`}
-									>
-										{publishFeedback.message}
-									</div>
-								)}
-
-								<div className="flex items-center justify-end gap-2 pt-2">
-									<button
-										type="button"
-										onClick={() => {
-											setShowGlobalModal(false);
-											setPublishFeedback(null);
+										className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-primary hover:underline border-0 bg-transparent cursor-pointer"
+										style={{
+											position: "absolute",
+											right: "8px",
+											top: "50%",
+											transform: "translateY(-50%)",
+											background: "transparent",
+											border: "none",
+											color: tokens.primary,
+											cursor: "pointer",
 										}}
-										className="px-3 py-1.5 rounded-btn text-xs border border-border text-text-muted hover:bg-card cursor-pointer"
 									>
-										Cancel
-									</button>
-									<button
-										type="submit"
-										disabled={isPublishing}
-										className="px-4 py-1.5 rounded-btn text-xs font-bold font-heading text-canvas transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-										style={{ backgroundColor: tokens.primary }}
-									>
-										{isPublishing ? "Saving..." : "Confirm & Deploy"}
+										{showAdminPassword ? "Hide" : "Show"}
 									</button>
 								</div>
-							</form>
-						</div>
+							</div>
+
+							{publishFeedback && (
+								<p
+									className={`text-xs p-2 rounded ${
+										publishFeedback.type === "success"
+											? "bg-success/15 text-success border border-success/30"
+											: "bg-danger/15 text-danger border border-danger/30"
+									}`}
+									style={{
+										padding: "8px",
+										borderRadius: tokens.radius,
+										fontSize: "12px",
+										margin: 0,
+									}}
+								>
+									{publishFeedback.message}
+								</p>
+							)}
+
+							<div
+								className="flex items-center gap-2 pt-2"
+								style={{
+									display: "flex",
+									alignItems: "center",
+									gap: "8px",
+									paddingTop: "8px",
+								}}
+							>
+								<button
+									type="button"
+									onClick={() => setShowGlobalModal(false)}
+									className="flex-1 py-2 text-xs rounded border border-border hover:bg-card transition-colors cursor-pointer"
+									style={{
+										flex: 1,
+										padding: "8px",
+										borderRadius: tokens.radius,
+										cursor: "pointer",
+										background: "transparent",
+										border: `1px solid ${tokens.border || "var(--border)"}`,
+										color: tokens.textPrimary,
+									}}
+								>
+									Cancel
+								</button>
+								<button
+									type="submit"
+									disabled={isPublishing}
+									className="flex-1 py-2 text-xs rounded bg-primary text-canvas font-medium hover:opacity-90 disabled:opacity-50 transition-opacity cursor-pointer border-0"
+									style={{
+										flex: 1,
+										padding: "8px",
+										borderRadius: tokens.radius,
+										backgroundColor: tokens.primary,
+										color: tokens.canvas,
+										fontWeight: 600,
+										cursor: isPublishing ? "not-allowed" : "pointer",
+										border: "none",
+									}}
+								>
+									{isPublishing ? "Publishing..." : "Confirm & Set"}
+								</button>
+							</div>
+						</form>
 					</div>
-				)}
-			</div>
+				</div>
+			)}
 		</div>
 	);
 }
+
+async function searchFontsourceFonts(
+	query: string,
+	category: string,
+): Promise<FontsourceItem[]> {
+	const trimmed = query.trim().toLowerCase();
+	let results = POPULAR_FONTSOURCE_FONTS;
+
+	if (category !== "all") {
+		results = results.filter((f) => f.category === category);
+	}
+	if (trimmed) {
+		results = results.filter((f) => f.family.toLowerCase().includes(trimmed));
+	}
+
+	return results;
+}
+
+export default ThemeStudioDrawer;
