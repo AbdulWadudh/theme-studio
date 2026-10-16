@@ -198,4 +198,12 @@ describe("@k79/theme-studio font catalog and playground exports", () => {
 		expect(typeof mod.ThemeShowcase).toBe("function");
 		expect(mod.ThemeShowcase).toBe(mod.ThemePlayground);
 	});
+
+	test("exports AllInOneCard component from index and react", async () => {
+		const reactMod = await import("../src/react/all-in-one-card");
+		const indexMod = await import("../src/index");
+		expect(typeof reactMod.AllInOneCard).toBe("function");
+		expect(typeof indexMod.AllInOneCard).toBe("function");
+		expect(indexMod.AllInOneCard).toBe(reactMod.AllInOneCard);
+	});
 });
