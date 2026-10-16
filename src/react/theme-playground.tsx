@@ -1,17 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTheme } from "./use-theme";
 
-export interface ThemePlaygroundProps {
-	title?: string;
-	className?: string;
-}
-
-export function ThemePlayground({
-	title = "Theme Studio Component Playground",
-	className = "",
-}: ThemePlaygroundProps) {
+export function ThemePlayground() {
 	let themeContext: ReturnType<typeof useTheme> | null = null;
 	try {
 		// biome-ignore lint/correctness/useHookAtTopLevel: safe wrapper for pre-init testing
@@ -21,17 +13,17 @@ export function ThemePlayground({
 	}
 
 	const [localCount, setLocalCount] = useState(0);
-	const [tactileClicks, setTactileClicks] = useState(0);
-	const [showPulseFeedback, setShowPulseFeedback] = useState(false);
 	const [localTab, setLocalTab] = useState<
 		"overview" | "components" | "tokens"
 	>("overview");
 	const [isAlertOpen, setIsAlertOpen] = useState(false);
 	const [localMode, setLocalMode] = useState<"light" | "dark">("dark");
 	const [localTactile, setLocalTactile] = useState(false);
+	const [tactileClicks, setTactileClicks] = useState(0);
+	const [showPulseFeedback, setShowPulseFeedback] = useState(false);
 
 	const theme = themeContext ? themeContext.theme : "dark-slate";
-	const _mode = themeContext ? themeContext.mode : localMode;
+	const mode = themeContext ? themeContext.mode : localMode;
 	const resolvedMode = themeContext ? themeContext.resolvedMode : localMode;
 	const tokens = themeContext ? themeContext.tokens : null;
 	const hasCustomizations = themeContext
@@ -40,41 +32,6 @@ export function ThemePlayground({
 	const isTactile = themeContext
 		? Boolean(tokens?.tactile === "true")
 		: localTactile;
-
-	useEffect(() => {
-		if (typeof document === "undefined") return;
-		const id = "k79-theme-studio-tactile-style";
-		if (!document.getElementById(id)) {
-			const style = document.createElement("style");
-			style.id = id;
-			style.textContent = `
-.tactile-always-active,
-[data-tactile="true"] button:not(:disabled):not([data-no-tactile]),
-[data-tactile="true"] [role="button"]:not([data-no-tactile]),
-[data-tactile="true"] .tactile-item {
-	box-shadow: 4px 4px 0px 0px #000000 !important;
-	border-color: #000000 !important;
-	border-width: 2px !important;
-	transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 120ms cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-.tactile-always-active:hover,
-[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):hover,
-[data-tactile="true"] [role="button"]:not([data-no-tactile]):hover,
-[data-tactile="true"] .tactile-item:hover {
-	transform: translate(2px, 2px) !important;
-	box-shadow: 2px 2px 0px 0px #000000 !important;
-}
-.tactile-always-active:active,
-[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):active,
-[data-tactile="true"] [role="button"]:not([data-no-tactile]):active,
-[data-tactile="true"] .tactile-item:active {
-	transform: translate(4px, 4px) !important;
-	box-shadow: 0px 0px 0px 0px #000000 !important;
-}
-`;
-			document.head.appendChild(style);
-		}
-	}, []);
 
 	const toggleTactile = () => {
 		const nextTactile = !isTactile;
@@ -96,35 +53,34 @@ export function ThemePlayground({
 			themeContext.setMode(next);
 		} else {
 			setLocalMode(next);
+			if (typeof document !== "undefined") {
+				document.documentElement.classList.remove("light", "dark");
+				document.documentElement.classList.add(next);
+			}
 		}
 	};
 
 	return (
-		<div
-			className={`w-full max-w-5xl mx-auto p-6 space-y-8 font-sans ${className}`}
-		>
-			{/* HEADER & QUICK CONTROLS */}
-			<div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl bg-surface border border-border">
+		<div className="w-full max-w-6xl mx-auto p-6 md:p-10 space-y-8">
+			{/* PLAYGROUND HEADER */}
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border">
 				<div>
 					<div className="flex items-center gap-2">
-						<span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
-						<h1 className="text-xl font-bold tracking-tight text-text-primary">
-							{title}
-						</h1>
+						<span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse" />
+						<span className="text-xs font-mono font-semibold tracking-wider uppercase text-text-muted">
+							Interactive Design Sandbox
+						</span>
 					</div>
-					<p className="text-xs text-text-muted mt-1">
-						Active Theme:{" "}
-						<span className="font-semibold text-primary">{theme}</span> |
-						Appearance: <span className="capitalize">{resolvedMode}</span>
-						{isTactile && (
-							<span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary text-canvas">
-								TACTILE PHYSICS ACTIVE
-							</span>
-						)}
+					<h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-text-primary mt-1">
+						Zenith Design System &amp; Studio
+					</h1>
+					<p className="text-xs md:text-sm text-text-muted mt-1 max-w-xl">
+						Live testing harness for zero-runtime CSS tokens, mechanical
+						physics, fluid elevation, and dynamic Google Fonts streaming.
 					</p>
 				</div>
 
-				<div className="flex flex-wrap items-center gap-2">
+				<div className="flex flex-wrap items-center gap-2.5">
 					<button
 						type="button"
 						onClick={toggleMode}
@@ -138,7 +94,7 @@ export function ThemePlayground({
 						onClick={toggleTactile}
 						className={`px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer transition-all ${
 							isTactile
-								? "bg-primary text-canvas border-primary font-bold shadow-sm"
+								? "bg-primary text-white border-primary font-bold shadow-sm"
 								: "bg-card text-text-primary border-border hover:bg-surface"
 						}`}
 					>
@@ -149,7 +105,7 @@ export function ThemePlayground({
 						<button
 							type="button"
 							onClick={themeContext.openStudio}
-							className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-primary text-canvas shadow-md hover:opacity-90 cursor-pointer transition-opacity"
+							className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-primary text-white shadow-md hover:opacity-90 cursor-pointer transition-opacity"
 						>
 							🎨 Open Theme Studio
 						</button>
@@ -181,11 +137,13 @@ export function ThemePlayground({
 
 				<div className="p-4 rounded-xl bg-card border border-border space-y-1">
 					<span className="text-xs font-medium text-text-muted">
-						Conversion Rate
+						Active Theme Palette
 					</span>
-					<div className="text-2xl font-bold text-text-primary">3.84%</div>
-					<div className="text-xs text-warning font-semibold flex items-center gap-1">
-						⚡ Optimizing checkout
+					<div className="text-2xl font-bold text-text-primary capitalize">
+						{theme}
+					</div>
+					<div className="text-xs text-text-muted font-mono">
+						Mode: {mode} ({resolvedMode})
 					</div>
 				</div>
 
@@ -212,7 +170,7 @@ export function ThemePlayground({
 				<div className="flex items-center justify-between border-b border-border pb-4">
 					<div>
 						<h2 className="text-base font-bold text-text-primary">
-							Interactive Showcase & Physics Playground
+							Interactive Showcase &amp; Physics Playground
 						</h2>
 						<p className="text-xs text-text-muted">
 							Hover and click buttons to test tactile physics, shadows, and
@@ -246,20 +204,20 @@ export function ThemePlayground({
 						<button
 							type="button"
 							onClick={() => setLocalCount((c) => c + 1)}
-							className="px-4 py-2 text-xs font-semibold rounded-lg bg-primary text-canvas border border-border cursor-pointer"
+							className="px-4 py-2 text-xs font-semibold rounded-lg bg-primary text-white border border-border cursor-pointer"
 						>
 							Primary ({localCount} clicks)
 						</button>
 						<button
 							type="button"
-							className="px-4 py-2 text-xs font-semibold rounded-lg bg-secondary text-canvas border border-border cursor-pointer"
+							className="px-4 py-2 text-xs font-semibold rounded-lg bg-secondary text-white border border-border cursor-pointer"
 						>
 							Secondary Action
 						</button>
 						<button
 							type="button"
 							onClick={toggleTactile}
-							className="px-4 py-2 text-xs font-semibold rounded-lg bg-accent text-canvas border border-border cursor-pointer"
+							className="px-4 py-2 text-xs font-semibold rounded-lg bg-accent text-white border border-border cursor-pointer"
 						>
 							⚡ Toggle Tactile ({isTactile ? "ON" : "OFF"})
 						</button>
@@ -276,8 +234,8 @@ export function ThemePlayground({
 							}}
 							className={`tactile-item tactile-always-active px-4 py-2 text-xs font-mono font-bold rounded-lg border-2 border-black transition-all cursor-pointer select-none ${
 								showPulseFeedback
-									? "bg-accent text-canvas"
-									: "bg-primary text-canvas"
+									? "bg-accent text-white"
+									: "bg-primary text-white"
 							}`}
 							style={{
 								boxShadow: "4px 4px 0px 0px #000000",
@@ -290,7 +248,7 @@ export function ThemePlayground({
 						<button
 							type="button"
 							onClick={() => setIsAlertOpen(true)}
-							className="px-4 py-2 text-xs font-semibold rounded-lg bg-danger text-canvas border border-border cursor-pointer"
+							className="px-4 py-2 text-xs font-semibold rounded-lg bg-danger text-white border border-border cursor-pointer"
 						>
 							Trigger Alert Dialog
 						</button>
@@ -312,25 +270,25 @@ export function ThemePlayground({
 				{/* BADGES & CHIPS */}
 				<div className="space-y-3">
 					<div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
-						Status Badges & Tokens:
+						Status Badges &amp; Tokens:
 					</div>
 					<div className="flex flex-wrap items-center gap-2">
-						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-primary text-canvas">
+						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-primary text-white">
 							Primary Badge
 						</span>
-						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-secondary text-canvas">
+						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-secondary text-white">
 							Secondary
 						</span>
-						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-success text-canvas">
+						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-success text-white">
 							Success State
 						</span>
-						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-warning text-canvas">
+						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-warning text-white">
 							Warning State
 						</span>
-						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-danger text-canvas">
+						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-danger text-white">
 							Danger State
 						</span>
-						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-accent text-canvas">
+						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-accent text-white">
 							Accent Glow
 						</span>
 					</div>
@@ -339,7 +297,7 @@ export function ThemePlayground({
 				{/* FORM INPUT CONTROLS */}
 				<div className="space-y-3">
 					<div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
-						Form Controls & Text Input:
+						Form Controls &amp; Text Input:
 					</div>
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div>
@@ -402,7 +360,7 @@ export function ThemePlayground({
 							<button
 								type="button"
 								onClick={() => setIsAlertOpen(false)}
-								className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-danger text-canvas cursor-pointer hover:opacity-90"
+								className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-danger text-white cursor-pointer hover:opacity-90"
 							>
 								Confirm
 							</button>

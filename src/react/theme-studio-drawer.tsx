@@ -11,6 +11,11 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useState } from "react";
 import {
+	type FontsourceItem,
+	loadFontsourceFont,
+	searchFontsourceFonts,
+} from "../core/fonts";
+import {
 	DEFINED_RADIUS_OPTIONS,
 	GLOW_COLOR_CHIPS,
 	getGlowValues,
@@ -20,29 +25,79 @@ import type { BaseTokens, ThemeDefinition } from "../core/types";
 import { ColorPickerField } from "./color-picker-field";
 import { useTheme } from "./use-theme";
 
-interface FontsourceItem {
-	id: string;
-	family: string;
-	category: string;
-}
-
 const POPULAR_FONTSOURCE_FONTS: FontsourceItem[] = [
-	{ id: "inter", family: "Inter", category: "sans-serif" },
-	{ id: "roboto", family: "Roboto", category: "sans-serif" },
-	{ id: "open-sans", family: "Open Sans", category: "sans-serif" },
-	{ id: "montserrat", family: "Montserrat", category: "sans-serif" },
-	{ id: "poppins", family: "Poppins", category: "sans-serif" },
-	{ id: "lato", family: "Lato", category: "sans-serif" },
-	{ id: "space-grotesk", family: "Space Grotesk", category: "sans-serif" },
-	{ id: "fira-code", family: "Fira Code", category: "monospace" },
-	{ id: "jetbrains-mono", family: "JetBrains Mono", category: "monospace" },
-	{ id: "playfair-display", family: "Playfair Display", category: "serif" },
-	{ id: "merriweather", family: "Merriweather", category: "serif" },
-	{ id: "outfit", family: "Outfit", category: "sans-serif" },
+	{
+		id: "inter",
+		family: "Inter",
+		category: "sans-serif",
+		weights: [400, 500, 600, 700],
+	},
+	{
+		id: "roboto",
+		family: "Roboto",
+		category: "sans-serif",
+		weights: [400, 500, 700],
+	},
+	{
+		id: "open-sans",
+		family: "Open Sans",
+		category: "sans-serif",
+		weights: [400, 600, 700],
+	},
+	{
+		id: "montserrat",
+		family: "Montserrat",
+		category: "sans-serif",
+		weights: [400, 500, 600, 700],
+	},
+	{
+		id: "poppins",
+		family: "Poppins",
+		category: "sans-serif",
+		weights: [400, 500, 600, 700],
+	},
+	{ id: "lato", family: "Lato", category: "sans-serif", weights: [400, 700] },
+	{
+		id: "space-grotesk",
+		family: "Space Grotesk",
+		category: "sans-serif",
+		weights: [400, 500, 700],
+	},
+	{
+		id: "fira-code",
+		family: "Fira Code",
+		category: "monospace",
+		weights: [400, 500, 700],
+	},
+	{
+		id: "jetbrains-mono",
+		family: "JetBrains Mono",
+		category: "monospace",
+		weights: [400, 500, 700],
+	},
+	{
+		id: "playfair-display",
+		family: "Playfair Display",
+		category: "serif",
+		weights: [400, 600, 700],
+	},
+	{
+		id: "merriweather",
+		family: "Merriweather",
+		category: "serif",
+		weights: [400, 700],
+	},
+	{
+		id: "outfit",
+		family: "Outfit",
+		category: "sans-serif",
+		weights: [400, 500, 600, 700],
+	},
 	{
 		id: "plus-jakarta-sans",
 		family: "Plus Jakarta Sans",
 		category: "sans-serif",
+		weights: [400, 500, 600, 700],
 	},
 ];
 
@@ -85,6 +140,23 @@ function extractFontFamily(font?: string): string {
 	return clean.startsWith("var(") ? clean : clean;
 }
 
+function getContrastColor(hexColor?: string): string {
+	if (!hexColor) return "#ffffff";
+	let hex = hexColor.replace("#", "").trim();
+	if (hex.length === 3) {
+		hex = hex
+			.split("")
+			.map((c) => c + c)
+			.join("");
+	}
+	if (hex.length !== 6) return "#ffffff";
+	const r = parseInt(hex.substring(0, 2), 16);
+	const g = parseInt(hex.substring(2, 4), 16);
+	const b = parseInt(hex.substring(4, 6), 16);
+	const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+	return yiq >= 140 ? "#090D16" : "#FFFFFF";
+}
+
 export function ThemeStudioDrawer() {
 	const {
 		isStudioOpen,
@@ -102,8 +174,8 @@ export function ThemeStudioDrawer() {
 	const [isRendered, setIsRendered] = useState(isStudioOpen);
 	const [isVisible, setIsVisible] = useState(false);
 
-	// Font Explorer State
-	const [showGoogleFonts, setShowGoogleFonts] = useState(false);
+	// Font Explorer State (Fontsource)
+	const [showFontExplorer, setShowFontExplorer] = useState(false);
 	const [fontSearch, setFontSearch] = useState("");
 	const [fontCategory, setFontCategory] = useState("all");
 	const [fontsList, setFontsList] = useState<FontsourceItem[]>(
@@ -115,16 +187,6 @@ export function ThemeStudioDrawer() {
 	// Tactical physics interactive state
 	const [tactileClicks, setTactileClicks] = useState<number>(0);
 	const [showClickFeedback, setShowClickFeedback] = useState<boolean>(false);
-
-	// Global Theme Modal & Admin Auth State
-	const [showGlobalModal, setShowGlobalModal] = useState(false);
-	const [adminPassword, setAdminPassword] = useState("");
-	const [showAdminPassword, setShowAdminPassword] = useState(false);
-	const [isPublishing, setIsPublishing] = useState(false);
-	const [publishFeedback, setPublishFeedback] = useState<{
-		type: "success" | "error";
-		message: string;
-	} | null>(null);
 	const [showCustomShadowInputs, setShowCustomShadowInputs] = useState(false);
 
 	// Inject styles for Colorshot popover, field reset, and tactile physics
@@ -252,9 +314,9 @@ button[data-colorshot-field],
 		}
 	}, [tokens.fontHeading, tokens.fontBody]);
 
-	// Debounced font search handler
+	// Debounced Fontsource search handler
 	useEffect(() => {
-		if (!showGoogleFonts) return;
+		if (!showFontExplorer) return;
 		setIsLoadingFonts(true);
 		const timer = setTimeout(async () => {
 			try {
@@ -267,7 +329,7 @@ button[data-colorshot-field],
 			}
 		}, 180);
 		return () => clearTimeout(timer);
-	}, [fontSearch, fontCategory, showGoogleFonts]);
+	}, [fontSearch, fontCategory, showFontExplorer]);
 
 	if (!isRendered) return null;
 
@@ -301,16 +363,7 @@ button[data-colorshot-field],
 		target: "heading" | "body" | "both",
 	) => {
 		const fontValue = `'${fontName}', sans-serif`;
-		if (typeof document !== "undefined") {
-			const linkId = `google-font-${fontName.toLowerCase().replace(/\s+/g, "-")}`;
-			if (!document.getElementById(linkId)) {
-				const link = document.createElement("link");
-				link.id = linkId;
-				link.rel = "stylesheet";
-				link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, "+")}:wght@400;500;600;700&display=swap`;
-				document.head.appendChild(link);
-			}
-		}
+		loadFontsourceFont(fontName);
 
 		if (target === "both") {
 			setCustomTokens({
@@ -375,58 +428,12 @@ button[data-colorshot-field],
 		});
 	};
 
-	const handleSaveGlobalTheme = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!adminPassword.trim()) {
-			setPublishFeedback({
-				type: "error",
-				message: "Admin password is required.",
-			});
-			return;
-		}
-
-		setIsPublishing(true);
-		setPublishFeedback(null);
-
-		try {
-			const res = await fetch("/api/admin/theme", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					tokens,
-					presetId: theme,
-					adminPassword,
-				}),
-			});
-
-			const data = await res.json();
-			if (!res.ok) {
-				throw new Error(data.error || "Failed to update global theme");
-			}
-
-			setPublishFeedback({
-				type: "success",
-				message: "Global theme updated successfully in database!",
-			});
-			setTimeout(() => {
-				setShowGlobalModal(false);
-				setPublishFeedback(null);
-				setAdminPassword("");
-			}, 1500);
-		} catch (err: unknown) {
-			setPublishFeedback({
-				type: "error",
-				message: err instanceof Error ? err.message : "Network error occurred",
-			});
-		} finally {
-			setIsPublishing(false);
-		}
-	};
-
 	const resetToDefault = () => {
 		resetTheme();
 		setActiveFont("ibm-noto");
 	};
+
+	const buttonContrastColor = getContrastColor(tokens.primary);
 
 	return (
 		<div
@@ -467,10 +474,10 @@ button[data-colorshot-field],
 			>
 				{/* FIXED SHEET HEADER */}
 				<div
-					className="p-4 sm:p-5 border-b border-border shrink-0 flex items-center justify-between z-10"
+					className="border-b border-border shrink-0 flex items-center justify-between z-10"
 					style={{
 						backgroundColor: tokens.surface,
-						padding: "16px 20px",
+						padding: "14px 18px",
 						borderBottom: `1px solid ${tokens.border || "var(--border)"}`,
 						display: "flex",
 						alignItems: "center",
@@ -483,24 +490,27 @@ button[data-colorshot-field],
 						style={{ display: "flex", alignItems: "center", gap: "10px" }}
 					>
 						<div
-							className="p-2 rounded-btn"
+							className="p-1.5 rounded-btn"
 							style={{
 								backgroundColor: tokens.card,
 								color: tokens.primary,
-								padding: "8px",
+								padding: "6px",
 								borderRadius: tokens.radius,
 								display: "flex",
 								alignItems: "center",
 								justifyContent: "center",
 							}}
 						>
-							<HugeiconsIcon icon={PaintBoardIcon} size={20} />
+							<HugeiconsIcon icon={PaintBoardIcon} size={18} />
 						</div>
 						<div>
-							<h3 className="font-semibold text-base tracking-tight font-heading m-0">
+							<h3 className="font-semibold text-sm tracking-tight font-heading m-0">
 								Theme Studio
 							</h3>
-							<p className="text-xs m-0" style={{ color: tokens.textMuted }}>
+							<p
+								className="text-[11px] m-0"
+								style={{ color: tokens.textMuted }}
+							>
 								Live Tailwind v4 variable inspector
 							</p>
 						</div>
@@ -508,17 +518,17 @@ button[data-colorshot-field],
 					<button
 						type="button"
 						onClick={closeStudio}
-						className="p-1.5 rounded-btn hover:bg-card transition-colors cursor-pointer border-0 bg-transparent"
+						className="p-1 rounded-btn hover:bg-card transition-colors cursor-pointer border-0 bg-transparent"
 						style={{
 							color: tokens.textPrimary,
 							cursor: "pointer",
 							background: "transparent",
 							border: "none",
-							padding: "6px",
+							padding: "4px",
 						}}
 						aria-label="Close Theme Studio"
 					>
-						<HugeiconsIcon icon={Cancel01Icon} size={20} />
+						<HugeiconsIcon icon={Cancel01Icon} size={18} />
 					</button>
 				</div>
 
@@ -526,34 +536,33 @@ button[data-colorshot-field],
 				<div
 					data-lenis-prevent="true"
 					onWheel={(e) => e.stopPropagation()}
-					className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-6 min-h-0 overscroll-contain"
+					className="flex-1 overflow-y-auto min-h-0 overscroll-contain"
 					style={{
 						flex: 1,
 						overflowY: "auto",
-						padding: "20px",
+						padding: "14px 16px",
 						display: "flex",
 						flexDirection: "column",
-						gap: "24px",
+						gap: "14px",
 					}}
 				>
 					{/* SECTION 1: PALETTES & PRESETS */}
 					<div>
 						<label
-							className="text-xs font-semibold tracking-wider uppercase block mb-2.5"
+							className="text-[11px] font-semibold tracking-wider uppercase block"
 							style={{
 								color: tokens.textMuted,
 								display: "block",
-								marginBottom: "10px",
+								marginBottom: "6px",
 							}}
 						>
 							Palettes &amp; Presets
 						</label>
 						<div
-							className="grid grid-cols-2 gap-2"
 							style={{
 								display: "grid",
 								gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-								gap: "8px",
+								gap: "6px",
 							}}
 						>
 							{themes.map((p: ThemeDefinition<BaseTokens>) => {
@@ -568,7 +577,7 @@ button[data-colorshot-field],
 										type="button"
 										key={p.id}
 										onClick={() => selectPreset(p.id)}
-										className={`text-left p-3 rounded-card border text-xs transition-all cursor-pointer flex flex-col justify-between ${
+										className={`text-left rounded-card border text-xs transition-all cursor-pointer flex flex-col justify-between ${
 											isSelected
 												? "border-primary ring-1 ring-primary"
 												: "border-border hover:border-text-muted"
@@ -576,21 +585,20 @@ button[data-colorshot-field],
 										style={{
 											backgroundColor: tokens.card,
 											borderRadius: tokens.radius,
-											padding: "12px",
+											padding: "10px 12px",
 											display: "flex",
 											flexDirection: "column",
 											justifyContent: "space-between",
-											minHeight: "56px",
+											minHeight: "52px",
 											textAlign: "left",
 										}}
 									>
 										<div
-											className="flex items-center justify-between mb-2"
 											style={{
 												display: "flex",
 												alignItems: "center",
 												justifyContent: "space-between",
-												marginBottom: "8px",
+												marginBottom: "6px",
 											}}
 										>
 											<span className="font-semibold font-heading">
@@ -605,7 +613,6 @@ button[data-colorshot-field],
 											)}
 										</div>
 										<div
-											className="flex items-center gap-1.5"
 											style={{
 												display: "flex",
 												alignItems: "center",
@@ -613,7 +620,6 @@ button[data-colorshot-field],
 											}}
 										>
 											<span
-												className="w-3.5 h-3.5 rounded-full border border-border/40 shadow-xs"
 												style={{
 													width: "14px",
 													height: "14px",
@@ -626,7 +632,6 @@ button[data-colorshot-field],
 												}}
 											/>
 											<span
-												className="w-3.5 h-3.5 rounded-full border border-border/40 shadow-xs"
 												style={{
 													width: "14px",
 													height: "14px",
@@ -639,7 +644,6 @@ button[data-colorshot-field],
 												}}
 											/>
 											<span
-												className="w-3.5 h-3.5 rounded-full border border-border/40 shadow-xs"
 												style={{
 													width: "14px",
 													height: "14px",
@@ -652,7 +656,6 @@ button[data-colorshot-field],
 												}}
 											/>
 											<span
-												className="w-3.5 h-3.5 rounded-full border border-border/40 shadow-xs"
 												style={{
 													width: "14px",
 													height: "14px",
@@ -672,18 +675,23 @@ button[data-colorshot-field],
 					</div>
 
 					{/* SECTION 2: TYPOGRAPHY SYSTEM */}
-					<div className="mt-6" style={{ marginTop: "24px" }}>
+					<div
+						style={{
+							marginTop: "6px",
+							paddingTop: "12px",
+							borderTop: `1px solid ${tokens.border || "var(--border)"}`,
+						}}
+					>
 						<div
-							className="flex items-center justify-between mb-2.5"
 							style={{
 								display: "flex",
 								alignItems: "center",
 								justifyContent: "space-between",
-								marginBottom: "10px",
+								marginBottom: "6px",
 							}}
 						>
 							<label
-								className="text-xs font-semibold tracking-wider uppercase flex items-center gap-1.5"
+								className="text-[11px] font-semibold tracking-wider uppercase flex items-center gap-1.5"
 								style={{
 									color: tokens.textMuted,
 									display: "flex",
@@ -691,7 +699,7 @@ button[data-colorshot-field],
 									gap: "6px",
 								}}
 							>
-								<HugeiconsIcon icon={TextFontIcon} size={16} />
+								<HugeiconsIcon icon={TextFontIcon} size={15} />
 								Typography System
 							</label>
 							<span
@@ -702,13 +710,13 @@ button[data-colorshot-field],
 									fontSize: "10px",
 								}}
 							>
-								{activeFont === "custom" ? "Custom Google Font" : "Preset"}
+								{activeFont === "custom" ? "Custom Font" : "Preset"}
 							</span>
 						</div>
 
 						{/* Current Active Fonts Indicator */}
 						<div
-							className={`p-2.5 rounded-card border mb-3 text-xs space-y-1.5 transition-all ${
+							className={`rounded-card border text-xs transition-all ${
 								activeFont === "custom"
 									? "border-primary ring-1 ring-primary"
 									: "border-border"
@@ -716,15 +724,14 @@ button[data-colorshot-field],
 							style={{
 								backgroundColor: tokens.card,
 								borderRadius: tokens.radius,
-								padding: "10px 12px",
-								marginBottom: "12px",
+								padding: "8px 12px",
+								marginBottom: "8px",
 								display: "flex",
 								flexDirection: "column",
-								gap: "6px",
+								gap: "4px",
 							}}
 						>
 							<div
-								className="flex items-center justify-between"
 								style={{
 									display: "flex",
 									alignItems: "center",
@@ -732,10 +739,13 @@ button[data-colorshot-field],
 								}}
 							>
 								<div
-									className="flex items-center gap-1.5"
-									style={{ display: "flex", alignItems: "center", gap: "6px" }}
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: "6px",
+									}}
 								>
-									<span style={{ color: tokens.textMuted }}>Heading Font:</span>
+									<span style={{ color: tokens.textMuted }}>Heading:</span>
 									<span className="font-semibold text-primary font-mono text-[11px]">
 										{extractFontFamily(tokens.fontHeading)}
 									</span>
@@ -747,17 +757,16 @@ button[data-colorshot-field],
 											display: "inline-flex",
 											alignItems: "center",
 											gap: "4px",
-											padding: "2px 8px",
+											padding: "1px 6px",
 											borderRadius: "9999px",
 										}}
 									>
-										<HugeiconsIcon icon={CheckmarkBadge01Icon} size={12} />
-										Active Custom Font
+										<HugeiconsIcon icon={CheckmarkBadge01Icon} size={11} />
+										Active
 									</span>
 								)}
 							</div>
 							<div
-								className="flex items-center justify-between"
 								style={{
 									display: "flex",
 									alignItems: "center",
@@ -765,10 +774,13 @@ button[data-colorshot-field],
 								}}
 							>
 								<div
-									className="flex items-center gap-1.5"
-									style={{ display: "flex", alignItems: "center", gap: "6px" }}
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: "6px",
+									}}
 								>
-									<span style={{ color: tokens.textMuted }}>Body Font:</span>
+									<span style={{ color: tokens.textMuted }}>Body:</span>
 									<span className="font-semibold text-secondary font-mono text-[11px]">
 										{extractFontFamily(tokens.fontBody)}
 									</span>
@@ -778,12 +790,11 @@ button[data-colorshot-field],
 
 						{/* Preset Pairings */}
 						<div
-							className="space-y-2 mb-3"
 							style={{
 								display: "flex",
 								flexDirection: "column",
-								gap: "8px",
-								marginBottom: "12px",
+								gap: "6px",
+								marginBottom: "8px",
 							}}
 						>
 							{FONT_PAIRINGS.map((f) => {
@@ -793,7 +804,7 @@ button[data-colorshot-field],
 										type="button"
 										key={f.id}
 										onClick={() => selectFontPairing(f.id)}
-										className={`w-full text-left px-3.5 py-2.5 rounded-card border text-xs transition-all flex items-center justify-between cursor-pointer ${
+										className={`w-full text-left rounded-card border text-xs transition-all flex items-center justify-between cursor-pointer ${
 											isSelected
 												? "border-primary ring-1 ring-primary"
 												: "border-border hover:border-text-muted"
@@ -801,7 +812,7 @@ button[data-colorshot-field],
 										style={{
 											backgroundColor: tokens.card,
 											borderRadius: tokens.radius,
-											padding: "10px 14px",
+											padding: "8px 12px",
 											display: "flex",
 											alignItems: "center",
 											justifyContent: "space-between",
@@ -810,9 +821,9 @@ button[data-colorshot-field],
 										}}
 									>
 										<div>
-											<p className="font-medium m-0">{f.name}</p>
+											<p className="font-medium m-0 text-xs">{f.name}</p>
 											<p
-												className="text-[11px] m-0"
+												className="text-[10px] m-0"
 												style={{ color: tokens.textMuted }}
 											>
 												UI: {f.headingName} • Body: {f.bodyName}
@@ -821,7 +832,7 @@ button[data-colorshot-field],
 										{isSelected && (
 											<HugeiconsIcon
 												icon={CheckmarkBadge01Icon}
-												size={16}
+												size={15}
 												className="text-primary"
 											/>
 										)}
@@ -830,7 +841,7 @@ button[data-colorshot-field],
 							})}
 						</div>
 
-						{/* Custom Google Fonts Explorer Toggle */}
+						{/* Fontsource Fonts Explorer Toggle */}
 						<div
 							className="rounded-card border overflow-hidden transition-all"
 							style={{
@@ -841,67 +852,66 @@ button[data-colorshot-field],
 						>
 							<button
 								type="button"
-								onClick={() => setShowGoogleFonts(!showGoogleFonts)}
-								className="w-full px-3.5 py-2.5 text-xs font-medium flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer border-0 bg-transparent text-left"
+								onClick={() => setShowFontExplorer(!showFontExplorer)}
+								className="w-full text-xs font-medium flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer border-0 bg-transparent text-left"
 								style={{
 									display: "flex",
 									alignItems: "center",
 									justifyContent: "space-between",
-									padding: "10px 14px",
+									padding: "8px 12px",
 									width: "100%",
 									color: tokens.textPrimary,
 								}}
 							>
 								<div
-									className="flex items-center gap-2"
-									style={{ display: "flex", alignItems: "center", gap: "8px" }}
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: "8px",
+									}}
 								>
 									<HugeiconsIcon
 										icon={Search01Icon}
 										size={14}
 										className="text-primary"
 									/>
-									<span>Search &amp; Explore Google Fonts</span>
+									<span>Search &amp; Explore Fontsource Fonts</span>
 								</div>
 								<span className="text-[10px] text-primary underline">
-									{showGoogleFonts ? "Close" : "Open"}
+									{showFontExplorer ? "Close" : "Open"}
 								</span>
 							</button>
 
-							{showGoogleFonts && (
+							{showFontExplorer && (
 								<div
-									className="p-3 border-t border-border space-y-3"
 									style={{
-										padding: "12px",
+										padding: "10px",
 										borderTop: `1px solid ${tokens.border || "var(--border)"}`,
 										display: "flex",
 										flexDirection: "column",
-										gap: "12px",
+										gap: "8px",
 									}}
 								>
-									<div
-										className="flex gap-2"
-										style={{ display: "flex", gap: "8px" }}
-									>
+									<div style={{ display: "flex", gap: "6px" }}>
 										<input
 											type="text"
-											placeholder="Search Google Font..."
+											placeholder="Search font (e.g. Inter, Outfit)..."
 											value={fontSearch}
 											onChange={(e) => setFontSearch(e.target.value)}
-											className="flex-1 px-2.5 py-1.5 text-xs rounded bg-canvas border border-border text-text-primary"
+											className="flex-1 text-xs rounded bg-canvas border border-border text-text-primary"
 											style={{
 												flex: 1,
 												backgroundColor: tokens.canvas,
 												borderColor: tokens.border,
 												color: tokens.textPrimary,
-												padding: "6px 10px",
+												padding: "6px 8px",
 												borderRadius: tokens.radius,
 											}}
 										/>
 										<select
 											value={fontCategory}
 											onChange={(e) => setFontCategory(e.target.value)}
-											className="px-2 py-1.5 text-xs rounded bg-canvas border border-border text-text-primary"
+											className="text-xs rounded bg-canvas border border-border text-text-primary"
 											style={{
 												backgroundColor: tokens.canvas,
 												borderColor: tokens.border,
@@ -918,25 +928,24 @@ button[data-colorshot-field],
 									</div>
 
 									<div
-										className="max-h-48 overflow-y-auto space-y-1.5 pr-1"
 										style={{
-											maxHeight: "192px",
+											maxHeight: "180px",
 											overflowY: "auto",
 											display: "flex",
 											flexDirection: "column",
-											gap: "6px",
+											gap: "4px",
 										}}
 									>
 										{isLoadingFonts ? (
 											<p
-												className="text-xs text-center py-4"
+												className="text-xs text-center py-3 m-0"
 												style={{ color: tokens.textMuted }}
 											>
 												Loading fonts...
 											</p>
 										) : fontsList.length === 0 ? (
 											<p
-												className="text-xs text-center py-4"
+												className="text-xs text-center py-3 m-0"
 												style={{ color: tokens.textMuted }}
 											>
 												No fonts found.
@@ -945,29 +954,29 @@ button[data-colorshot-field],
 											fontsList.map((f) => (
 												<div
 													key={f.id}
-													className="flex items-center justify-between p-2 rounded bg-surface/50 border border-border/50 text-xs"
+													className="rounded border text-xs"
 													style={{
 														display: "flex",
 														alignItems: "center",
 														justifyContent: "space-between",
-														padding: "8px",
+														padding: "6px 8px",
 														borderRadius: tokens.radius,
 														backgroundColor: tokens.surface,
+														borderColor: tokens.border,
 													}}
 												>
 													<div>
-														<span className="font-medium block">
+														<span className="font-medium block text-xs">
 															{f.family}
 														</span>
 														<span
-															className="text-[10px] capitalize"
+															className="text-[9px] capitalize"
 															style={{ color: tokens.textMuted }}
 														>
 															{f.category}
 														</span>
 													</div>
 													<div
-														className="flex items-center gap-1"
 														style={{
 															display: "flex",
 															alignItems: "center",
@@ -979,7 +988,7 @@ button[data-colorshot-field],
 															onClick={() =>
 																applyCustomFont(f.family, "heading")
 															}
-															className="px-2 py-0.5 text-[10px] rounded border border-border hover:bg-primary/20 text-primary cursor-pointer"
+															className="text-[10px] rounded border border-border hover:bg-primary/20 text-primary cursor-pointer"
 															title="Apply to Headings"
 															style={{
 																padding: "2px 6px",
@@ -991,7 +1000,7 @@ button[data-colorshot-field],
 														<button
 															type="button"
 															onClick={() => applyCustomFont(f.family, "body")}
-															className="px-2 py-0.5 text-[10px] rounded border border-border hover:bg-secondary/20 text-secondary cursor-pointer"
+															className="text-[10px] rounded border border-border hover:bg-secondary/20 text-secondary cursor-pointer"
 															title="Apply to Body"
 															style={{
 																padding: "2px 6px",
@@ -1003,13 +1012,13 @@ button[data-colorshot-field],
 														<button
 															type="button"
 															onClick={() => applyCustomFont(f.family, "both")}
-															className="px-2 py-0.5 text-[10px] rounded bg-primary text-canvas font-medium cursor-pointer"
+															className="text-[10px] rounded font-medium cursor-pointer"
 															title="Apply to Both"
 															style={{
 																padding: "2px 6px",
 																borderRadius: "4px",
 																backgroundColor: tokens.primary,
-																color: tokens.canvas,
+																color: buttonContrastColor,
 															}}
 														>
 															Both
@@ -1025,20 +1034,30 @@ button[data-colorshot-field],
 					</div>
 
 					{/* SECTION 3: SURFACES & ACCENTS */}
-					<div className="mt-6" style={{ marginTop: "24px" }}>
+					<div
+						style={{
+							marginTop: "6px",
+							paddingTop: "12px",
+							borderTop: `1px solid ${tokens.border || "var(--border)"}`,
+						}}
+					>
 						<label
-							className="text-xs font-semibold tracking-wider uppercase block mb-2.5"
+							className="text-[11px] font-semibold tracking-wider uppercase block"
 							style={{
 								color: tokens.textMuted,
 								display: "block",
-								marginBottom: "10px",
+								marginBottom: "6px",
 							}}
 						>
 							Surfaces &amp; Accents
 						</label>
+
 						<div
-							className="space-y-2.5 text-xs"
-							style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+							style={{
+								display: "flex",
+								flexDirection: "column",
+								gap: "5px",
+							}}
 						>
 							{[
 								{
@@ -1097,19 +1116,18 @@ button[data-colorshot-field],
 								return (
 									<div
 										key={key}
-										className="flex items-center justify-between p-2.5 rounded-card border border-border"
+										className="rounded-card border border-border"
 										style={{
 											backgroundColor: tokens.card,
 											borderRadius: tokens.radius,
-											padding: "10px 14px",
+											padding: "7px 12px",
 											display: "flex",
 											alignItems: "center",
 											justifyContent: "space-between",
 										}}
 									>
-										<span>{label}</span>
+										<span className="text-xs">{label}</span>
 										<div
-											className="flex items-center gap-2"
 											style={{
 												display: "flex",
 												alignItems: "center",
@@ -1121,9 +1139,9 @@ button[data-colorshot-field],
 													type="button"
 													onClick={() => updateToken(key, originalColor)}
 													title={`Reset to ${currentPresetObj.name} default (${originalColor})`}
-													className="p-1 rounded hover:bg-white/10 text-primary transition-colors cursor-pointer flex items-center justify-center border-0 bg-transparent"
+													className="rounded hover:bg-white/10 text-primary transition-colors cursor-pointer flex items-center justify-center border-0 bg-transparent"
 													style={{
-														padding: "4px",
+														padding: "2px",
 														borderRadius: "4px",
 														cursor: "pointer",
 														background: "transparent",
@@ -1149,32 +1167,156 @@ button[data-colorshot-field],
 						</div>
 					</div>
 
-					{/* SECTION 4: CARD CORNER RADIUS */}
+					{/* SECTION 4: TEXT & TYPOGRAPHY COLORS (SEPARATED FROM CANVAS) */}
 					<div
-						className="mt-6 pb-2"
-						style={{ marginTop: "24px", paddingBottom: "8px" }}
+						style={{
+							marginTop: "6px",
+							paddingTop: "12px",
+							borderTop: `1px solid ${tokens.border || "var(--border)"}`,
+						}}
 					>
 						<div
-							className="flex items-center justify-between text-xs mb-2"
 							style={{
 								display: "flex",
 								alignItems: "center",
 								justifyContent: "space-between",
-								marginBottom: "8px",
+								marginBottom: "6px",
+							}}
+						>
+							<label
+								className="text-[11px] font-semibold tracking-wider uppercase block"
+								style={{
+									color: tokens.textMuted,
+									display: "block",
+								}}
+							>
+								Text &amp; Typography Colors
+							</label>
+							<span
+								className="text-[10px] font-mono opacity-70"
+								style={{ color: tokens.textMuted }}
+							>
+								Independent of Canvas
+							</span>
+						</div>
+
+						<div
+							style={{
+								display: "flex",
+								flexDirection: "column",
+								gap: "5px",
+							}}
+						>
+							{[
+								{
+									key: "textPrimary" as const,
+									label: "Heading & Primary Text",
+									title: "Primary Text Color",
+								},
+								{
+									key: "textMuted" as const,
+									label: "Muted & Secondary Text",
+									title: "Muted Text Color",
+								},
+							].map(({ key, label, title }) => {
+								const presetTokensForCurrentMode =
+									isLight && currentPresetObj.lightTokens
+										? {
+												...currentPresetObj.tokens,
+												...currentPresetObj.lightTokens,
+											}
+										: currentPresetObj.tokens;
+								const originalColor = (
+									presetTokensForCurrentMode as Record<
+										string,
+										string | undefined
+									>
+								)[key];
+								const isCustomized =
+									Boolean(originalColor) &&
+									tokens[key]?.toLowerCase() !== originalColor?.toLowerCase();
+
+								return (
+									<div
+										key={key}
+										className="rounded-card border border-border"
+										style={{
+											backgroundColor: tokens.card,
+											borderRadius: tokens.radius,
+											padding: "7px 12px",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "space-between",
+										}}
+									>
+										<span className="text-xs">{label}</span>
+										<div
+											style={{
+												display: "flex",
+												alignItems: "center",
+												gap: "8px",
+											}}
+										>
+											{isCustomized && originalColor ? (
+												<button
+													type="button"
+													onClick={() => updateToken(key, originalColor)}
+													title={`Reset to default (${originalColor})`}
+													className="rounded hover:bg-white/10 text-primary transition-colors cursor-pointer flex items-center justify-center border-0 bg-transparent"
+													style={{
+														padding: "2px",
+														borderRadius: "4px",
+														cursor: "pointer",
+														background: "transparent",
+														border: "none",
+														color: tokens.primary,
+													}}
+												>
+													<HugeiconsIcon icon={RotateLeft01Icon} size={13} />
+												</button>
+											) : null}
+											<span className="font-mono text-[11px] opacity-75">
+												{tokens[key]}
+											</span>
+											<ColorPickerField
+												value={tokens[key] || "#FFFFFF"}
+												onChange={(val) => updateToken(key, val)}
+												title={title}
+											/>
+										</div>
+									</div>
+								);
+							})}
+						</div>
+					</div>
+
+					{/* SECTION 5: CARD CORNER RADIUS */}
+					<div
+						style={{
+							marginTop: "6px",
+							paddingTop: "12px",
+							borderTop: `1px solid ${tokens.border || "var(--border)"}`,
+						}}
+					>
+						<div
+							style={{
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "space-between",
+								marginBottom: "6px",
 							}}
 						>
 							<span
-								className="font-semibold tracking-wider uppercase"
+								className="text-[11px] font-semibold tracking-wider uppercase"
 								style={{ color: tokens.textMuted }}
 							>
 								Card Corner Radius
 							</span>
-							<span className="font-mono text-primary font-bold">
+							<span className="text-xs font-mono text-primary font-bold">
 								{tokens.radius}
 							</span>
 						</div>
 						<div
-							className="grid grid-cols-6 gap-1"
 							style={{
 								display: "grid",
 								gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
@@ -1193,7 +1335,7 @@ button[data-colorshot-field],
 										type="button"
 										key={rad}
 										onClick={() => updateToken("radius", rad)}
-										className={`py-2 text-[11px] font-mono border transition-all cursor-pointer ${
+										className={`py-1.5 text-[11px] font-mono border transition-all cursor-pointer ${
 											isSelected
 												? "border-primary ring-1 ring-primary font-bold text-primary"
 												: "border-border hover:border-text-muted text-text-muted"
@@ -1201,7 +1343,7 @@ button[data-colorshot-field],
 										style={{
 											backgroundColor: tokens.card,
 											borderRadius: rad,
-											padding: "8px 0",
+											padding: "6px 0",
 											textAlign: "center",
 											cursor: "pointer",
 											display: "flex",
@@ -1216,93 +1358,74 @@ button[data-colorshot-field],
 						</div>
 					</div>
 
-					{/* SECTION 5: TACTICAL EFFECT (TACTILE PHYSICS) */}
+					{/* SECTION 6: TACTICAL EFFECT (TACTILE PHYSICS) */}
 					<div
-						className="mt-6 pt-5 border-t border-border"
 						style={{
-							marginTop: "24px",
-							paddingTop: "20px",
+							marginTop: "6px",
+							paddingTop: "12px",
 							borderTop: `1px solid ${tokens.border || "var(--border)"}`,
 						}}
 					>
 						<div
-							className="flex items-center justify-between text-xs mb-2"
 							style={{
 								display: "flex",
 								alignItems: "center",
 								justifyContent: "space-between",
-								marginBottom: "8px",
+								marginBottom: "6px",
 							}}
 						>
-							<div
-								className="flex items-center gap-1.5"
-								style={{ display: "flex", alignItems: "center", gap: "6px" }}
+							<span
+								className="text-[11px] font-semibold tracking-wider uppercase"
+								style={{ color: tokens.textMuted }}
 							>
-								<span
-									className="font-semibold tracking-wider uppercase"
-									style={{ color: tokens.textMuted }}
-								>
-									Tactical Effect (Tactile Physics)
-								</span>
-							</div>
+								Tactical Effect (Tactile Physics)
+							</span>
 							<button
 								type="button"
 								onClick={toggleTactile}
-								className={`px-2.5 py-1 rounded-badge text-[11px] font-mono font-bold border transition-all cursor-pointer ${
+								className={`px-2 py-0.5 rounded-badge text-[10px] font-mono font-bold border transition-all cursor-pointer ${
 									tokens.tactile === "true"
 										? "border-primary bg-primary/20 text-primary ring-1 ring-primary"
 										: "border-border text-text-muted hover:border-text-muted"
 								}`}
 								style={{
-									padding: "4px 10px",
+									padding: "2px 8px",
 									borderRadius: "9999px",
-									fontSize: "11px",
+									fontSize: "10px",
 									cursor: "pointer",
 								}}
 							>
 								{tokens.tactile === "true" ? "ACTIVE" : "DISABLED"}
 							</button>
 						</div>
-						<p
-							className="text-[11px] leading-relaxed mb-3"
-							style={{
-								color: tokens.textMuted,
-								fontSize: "11px",
-								marginBottom: "12px",
-							}}
-						>
-							Mechanical 2px hover displacement &amp; 4px active press click
-							physics on buttons &amp; cards.
-						</p>
 						<div
-							className="p-3.5 rounded-card border border-border space-y-2.5"
+							className="rounded-card border border-border"
 							style={{
 								backgroundColor: tokens.card,
 								borderRadius: tokens.radius,
-								padding: "14px",
+								padding: "10px 12px",
 								display: "flex",
 								flexDirection: "column",
-								gap: "10px",
+								gap: "8px",
 							}}
 						>
 							<div
-								className="flex items-center justify-between text-xs"
 								style={{
 									display: "flex",
 									alignItems: "center",
 									justifyContent: "space-between",
 								}}
 							>
-								<span className="font-medium text-text-primary">
+								<span className="text-xs font-medium text-text-primary">
 									Interactive Physics Test
 								</span>
 								<span
 									className="text-[10px] font-mono px-2 py-0.5 rounded-badge bg-primary/10 text-primary border border-primary/20"
-									style={{ padding: "2px 8px", borderRadius: "9999px" }}
+									style={{ padding: "2px 6px", borderRadius: "9999px" }}
 								>
 									{tactileClicks > 0
-										? `${tactileClicks} Click${tactileClicks > 1 ? "s" : ""} Registered`
-										: "Ready to Test"}
+										? `${tactileClicks} Click${tactileClicks > 1 ? "s" : ""}`
+										: "Ready"}
 								</span>
 							</div>
 							<button
@@ -1315,49 +1438,47 @@ button[data-colorshot-field],
 										navigator.vibrate?.(20);
 									}
 								}}
-								className={`tactile-item tactile-always-active w-full py-2 px-3 rounded-btn font-mono text-xs font-bold transition-all cursor-pointer select-none text-center ${
+								className={`tactile-item tactile-always-active w-full py-1.5 px-3 rounded-btn font-mono text-xs font-bold transition-all cursor-pointer select-none text-center ${
 									showClickFeedback
-										? "bg-accent text-canvas scale-95"
-										: "bg-primary text-canvas hover:opacity-95"
+										? "bg-accent scale-95"
+										: "bg-primary hover:opacity-95"
 								}`}
 								style={{
 									borderRadius: tokens.radius,
 									backgroundColor: showClickFeedback
 										? tokens.accent
 										: tokens.primary,
-									color: tokens.canvas,
+									color: "#FFFFFF",
 									width: "100%",
-									padding: "8px 12px",
+									padding: "6px 10px",
 									cursor: "pointer",
 								}}
 							>
 								{showClickFeedback
-									? "💥 Mechanical Pulse Registered!"
+									? "💥 Pulse Registered!"
 									: "Click & Feel Physics"}
 							</button>
 						</div>
 					</div>
 
-					{/* SECTION 6: ELEVATION & SHADOWS */}
+					{/* SECTION 7: ELEVATION & SHADOWS */}
 					<div
-						className="mt-6 pt-5 border-t border-border"
 						style={{
-							marginTop: "24px",
-							paddingTop: "20px",
+							marginTop: "6px",
+							paddingTop: "12px",
 							borderTop: `1px solid ${tokens.border || "var(--border)"}`,
 						}}
 					>
 						<div
-							className="flex items-center justify-between text-xs mb-2"
 							style={{
 								display: "flex",
 								alignItems: "center",
 								justifyContent: "space-between",
-								marginBottom: "8px",
+								marginBottom: "6px",
 							}}
 						>
 							<span
-								className="font-semibold tracking-wider uppercase"
+								className="text-[11px] font-semibold tracking-wider uppercase"
 								style={{ color: tokens.textMuted }}
 							>
 								Elevation &amp; Shadows
@@ -1372,12 +1493,11 @@ button[data-colorshot-field],
 
 						{/* Shadow Presets Grid */}
 						<div
-							className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3"
 							style={{
 								display: "grid",
 								gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-								gap: "8px",
-								marginBottom: "12px",
+								gap: "6px",
+								marginBottom: "8px",
 							}}
 						>
 							{SHADOW_PRESETS.map((p) => {
@@ -1389,7 +1509,7 @@ button[data-colorshot-field],
 										type="button"
 										key={p.id}
 										onClick={() => applyShadowPreset(p.id)}
-										className={`p-2 rounded-btn text-xs text-left border transition-all cursor-pointer flex flex-col justify-between h-14 ${
+										className={`rounded-btn text-xs text-left border transition-all cursor-pointer flex flex-col justify-between ${
 											isSelected
 												? "border-primary ring-1 ring-primary font-bold text-primary"
 												: "border-border hover:border-text-muted text-text-muted"
@@ -1397,15 +1517,15 @@ button[data-colorshot-field],
 										style={{
 											backgroundColor: tokens.card,
 											borderRadius: tokens.radius,
-											padding: "8px",
-											height: "56px",
+											padding: "6px 8px",
+											height: "48px",
 											display: "flex",
 											flexDirection: "column",
 											justifyContent: "space-between",
 											textAlign: "left",
 										}}
 									>
-										<span className="truncate">{p.label}</span>
+										<span className="truncate text-xs">{p.label}</span>
 										<span className="text-[9px] font-mono opacity-60 truncate">
 											{p.isGlow
 												? "Glow"
@@ -1420,31 +1540,33 @@ button[data-colorshot-field],
 
 						{/* Glow Color Customizer */}
 						<div
-							className="p-3 rounded-card border border-border space-y-2 mb-3"
+							className="rounded-card border border-border"
 							style={{
 								backgroundColor: tokens.card,
 								borderRadius: tokens.radius,
-								padding: "12px",
+								padding: "8px 10px",
 								display: "flex",
 								flexDirection: "column",
-								gap: "8px",
-								marginBottom: "12px",
+								gap: "6px",
+								marginBottom: "8px",
 							}}
 						>
 							<div
-								className="flex items-center justify-between text-xs"
 								style={{
 									display: "flex",
 									alignItems: "center",
 									justifyContent: "space-between",
 								}}
 							>
-								<span className="font-medium text-text-primary">
+								<span className="text-xs font-medium text-text-primary">
 									Neon Glow Color
 								</span>
 								<div
-									className="flex items-center gap-1.5"
-									style={{ display: "flex", alignItems: "center", gap: "6px" }}
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: "6px",
+									}}
 								>
 									<span className="text-[10px] font-mono text-text-muted">
 										{tokens.glowColor || "#38BDF8"}
@@ -1453,14 +1575,11 @@ button[data-colorshot-field],
 										value={tokens.glowColor || "#38BDF8"}
 										onChange={(val) => handleGlowColorChange(val)}
 										size="sm"
-										title="Choose custom neon glow color or gradient"
+										title="Choose custom neon glow color"
 									/>
 								</div>
 							</div>
-							<div
-								className="flex flex-wrap gap-1.5"
-								style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}
-							>
+							<div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
 								{GLOW_COLOR_CHIPS.map((chip) => {
 									const chipHex =
 										chip.color === "primary"
@@ -1474,7 +1593,7 @@ button[data-colorshot-field],
 											type="button"
 											key={chip.label}
 											onClick={() => handleGlowColorChange(chip.color)}
-											className={`px-2 py-0.5 rounded-badge text-[10px] border flex items-center gap-1 transition-all cursor-pointer ${
+											className={`text-[10px] border flex items-center gap-1 transition-all cursor-pointer ${
 												isActive
 													? "border-primary text-primary font-bold ring-1 ring-primary"
 													: "border-border text-text-muted hover:border-text-muted"
@@ -1483,13 +1602,12 @@ button[data-colorshot-field],
 												display: "inline-flex",
 												alignItems: "center",
 												gap: "4px",
-												padding: "2px 8px",
+												padding: "2px 6px",
 												borderRadius: "9999px",
 												cursor: "pointer",
 											}}
 										>
 											<span
-												className="w-2 h-2 rounded-full inline-block"
 												style={{
 													width: "8px",
 													height: "8px",
@@ -1508,13 +1626,13 @@ button[data-colorshot-field],
 
 						{/* Live Elevation Preview Card */}
 						<div
-							className="p-3.5 rounded-card border border-border text-center transition-all my-3"
+							className="rounded-card border border-border text-center transition-all"
 							style={{
 								backgroundColor: tokens.card,
 								boxShadow: tokens.shadow || "none",
 								borderRadius: tokens.radius,
-								padding: "14px",
-								margin: "12px 0",
+								padding: "10px",
+								margin: "6px 0",
 								textAlign: "center",
 							}}
 						>
@@ -1529,13 +1647,13 @@ button[data-colorshot-field],
 						</div>
 
 						{/* Collapsible Custom Shadow Inputs */}
-						<div>
+						<div style={{ marginTop: "4px" }}>
 							<button
 								type="button"
 								onClick={() =>
 									setShowCustomShadowInputs(!showCustomShadowInputs)
 								}
-								className="text-[11px] font-mono text-primary hover:underline cursor-pointer flex items-center gap-1 border-0 bg-transparent p-0"
+								className="text-[10px] font-mono text-primary hover:underline cursor-pointer flex items-center gap-1 border-0 bg-transparent p-0"
 								style={{
 									cursor: "pointer",
 									background: "transparent",
@@ -1546,78 +1664,77 @@ button[data-colorshot-field],
 							>
 								<span>
 									{showCustomShadowInputs
-										? "Hide Custom CSS Shadows"
+										? "Hide Raw Shadow CSS"
 										: "Edit Raw Shadow CSS"}
 								</span>
 							</button>
 							{showCustomShadowInputs && (
 								<div
-									className="space-y-2 mt-2 pt-2 border-t border-border"
 									style={{
-										marginTop: "8px",
-										paddingTop: "8px",
+										marginTop: "6px",
+										paddingTop: "6px",
 										borderTop: `1px solid ${tokens.border || "var(--border)"}`,
 										display: "flex",
 										flexDirection: "column",
-										gap: "8px",
+										gap: "6px",
 									}}
 								>
 									<div>
-										<span className="text-[10px] font-mono text-text-muted block">
+										<span className="text-[9px] font-mono text-text-muted block">
 											--shadow
 										</span>
 										<input
 											type="text"
 											value={tokens.shadow || ""}
 											onChange={(e) => updateToken("shadow", e.target.value)}
-											className="w-full px-2 py-1 text-[11px] font-mono rounded bg-canvas border border-border text-text-primary"
+											className="w-full text-[10px] font-mono rounded bg-canvas border border-border text-text-primary"
 											placeholder="0 4px 6px -1px rgba(0,0,0,0.1)..."
 											style={{
 												backgroundColor: tokens.canvas,
 												borderColor: tokens.border,
 												color: tokens.textPrimary,
 												width: "100%",
-												padding: "4px 8px",
+												padding: "4px 6px",
 												borderRadius: tokens.radius,
 											}}
 										/>
 									</div>
 									<div>
-										<span className="text-[10px] font-mono text-text-muted block">
+										<span className="text-[9px] font-mono text-text-muted block">
 											--shadow-sm
 										</span>
 										<input
 											type="text"
 											value={tokens.shadowSm || ""}
 											onChange={(e) => updateToken("shadowSm", e.target.value)}
-											className="w-full px-2 py-1 text-[11px] font-mono rounded bg-canvas border border-border text-text-primary"
+											className="w-full text-[10px] font-mono rounded bg-canvas border border-border text-text-primary"
 											placeholder="0 1px 2px 0 rgba(0,0,0,0.05)..."
 											style={{
 												backgroundColor: tokens.canvas,
 												borderColor: tokens.border,
 												color: tokens.textPrimary,
 												width: "100%",
-												padding: "4px 8px",
+												padding: "4px 6px",
 												borderRadius: tokens.radius,
 											}}
 										/>
 									</div>
 									<div>
-										<span className="text-[10px] font-mono text-text-muted block">
+										<span className="text-[9px] font-mono text-text-muted block">
 											--shadow-lg
 										</span>
 										<input
 											type="text"
 											value={tokens.shadowLg || ""}
 											onChange={(e) => updateToken("shadowLg", e.target.value)}
-											className="w-full px-2 py-1 text-[11px] font-mono rounded bg-canvas border border-border text-text-primary"
+											className="w-full text-[10px] font-mono rounded bg-canvas border border-border text-text-primary"
 											placeholder="0 10px 15px -3px rgba(0,0,0,0.1)..."
 											style={{
 												backgroundColor: tokens.canvas,
 												borderColor: tokens.border,
 												color: tokens.textPrimary,
 												width: "100%",
-												padding: "4px 8px",
+												padding: "4px 6px",
 												borderRadius: tokens.radius,
 											}}
 										/>
@@ -1628,111 +1745,54 @@ button[data-colorshot-field],
 					</div>
 				</div>
 
-				{/* FIXED SHEET FOOTER */}
+				{/* FIXED SHEET FOOTER: INLINE FLOATING RIGHT */}
 				<div
-					className="p-4 border-t border-border shrink-0 flex flex-col gap-2.5 z-10"
 					style={{
 						backgroundColor: tokens.surface,
-						padding: "16px",
+						padding: "12px 16px",
 						borderTop: `1px solid ${tokens.border || "var(--border)"}`,
 						display: "flex",
-						flexDirection: "column",
-						gap: "10px",
+						alignItems: "center",
+						justifyContent: "flex-end",
+						gap: "8px",
 						flexShrink: 0,
 					}}
 				>
-					<div
-						className="grid grid-cols-3 gap-2"
+					<button
+						type="button"
+						onClick={resetToDefault}
+						className="flex items-center justify-center gap-1.5 text-xs rounded-btn border border-border hover:bg-card hover:text-text-primary transition-colors cursor-pointer text-text-muted whitespace-nowrap"
+						title="Reset all settings to default theme"
 						style={{
-							display: "grid",
-							gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-							gap: "8px",
+							height: "34px",
+							borderRadius: tokens.radius,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							gap: "6px",
+							cursor: "pointer",
+							backgroundColor: "transparent",
+							border: `1px solid ${tokens.border || "var(--border)"}`,
+							color: tokens.textMuted,
+							padding: "0 12px",
 						}}
 					>
-						<button
-							type="button"
-							onClick={resetToDefault}
-							className="flex items-center justify-center gap-1.5 text-xs h-9 px-2 rounded-btn border border-border hover:bg-card hover:text-text-primary transition-colors cursor-pointer text-text-muted whitespace-nowrap"
-							title="Reset all settings to default theme"
-							style={{
-								height: "36px",
-								borderRadius: tokens.radius,
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								gap: "6px",
-								cursor: "pointer",
-								backgroundColor: "transparent",
-								border: `1px solid ${tokens.border || "var(--border)"}`,
-								color: tokens.textMuted,
-							}}
-						>
-							<HugeiconsIcon
-								icon={RotateLeft01Icon}
-								size={14}
-								className="shrink-0"
-							/>
-							<span>Reset</span>
-						</button>
-
-						<button
-							type="button"
-							onClick={() => {
-								setAdminPassword("");
-								setPublishFeedback(null);
-								setShowGlobalModal(true);
-							}}
-							className="flex items-center justify-center gap-1.5 text-xs h-9 px-2 rounded-btn border border-primary/40 text-primary hover:bg-primary/10 transition-colors cursor-pointer whitespace-nowrap"
-							title="Publish theme globally across all visitors"
-							style={{
-								height: "36px",
-								borderRadius: tokens.radius,
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								gap: "6px",
-								cursor: "pointer",
-								backgroundColor: "transparent",
-								border: `1px solid ${tokens.primary || "#38BDF8"}`,
-								color: tokens.primary,
-							}}
-						>
-							<span>Set Global</span>
-						</button>
-
-						<a
-							href="/admin"
-							target="_blank"
-							rel="noreferrer"
-							className="flex items-center justify-center gap-1.5 text-xs h-9 px-2 rounded-btn border border-border hover:bg-card hover:text-text-primary transition-colors cursor-pointer text-text-muted whitespace-nowrap no-underline"
-							title="Open Full Admin Console in new tab"
-							style={{
-								height: "36px",
-								borderRadius: tokens.radius,
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								gap: "6px",
-								cursor: "pointer",
-								backgroundColor: "transparent",
-								border: `1px solid ${tokens.border || "var(--border)"}`,
-								color: tokens.textMuted,
-								textDecoration: "none",
-							}}
-						>
-							<span>Admin</span>
-						</a>
-					</div>
+						<HugeiconsIcon
+							icon={RotateLeft01Icon}
+							size={13}
+							className="shrink-0"
+						/>
+						<span>Reset</span>
+					</button>
 
 					<button
 						type="button"
 						onClick={closeStudio}
-						className="w-full h-10 text-xs rounded-btn font-medium font-heading transition-all active:scale-[0.99] cursor-pointer shadow-md flex items-center justify-center gap-2 whitespace-nowrap"
+						className="text-xs rounded-btn font-medium font-heading transition-all active:scale-[0.99] cursor-pointer shadow-sm flex items-center justify-center gap-1.5 whitespace-nowrap"
 						style={{
-							width: "100%",
-							height: "40px",
+							height: "34px",
 							backgroundColor: tokens.primary,
-							color: tokens.canvas,
+							color: buttonContrastColor,
 							borderRadius: tokens.radius,
 							display: "flex",
 							alignItems: "center",
@@ -1740,221 +1800,15 @@ button[data-colorshot-field],
 							fontWeight: 600,
 							cursor: "pointer",
 							border: "none",
+							padding: "0 16px",
 						}}
 					>
 						Apply &amp; Close
 					</button>
 				</div>
 			</div>
-
-			{/* Global Theme Admin Auth Modal */}
-			{showGlobalModal && (
-				<div
-					data-lenis-prevent="true"
-					onClick={() => setShowGlobalModal(false)}
-					className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
-					style={{
-						position: "fixed",
-						top: 0,
-						right: 0,
-						bottom: 0,
-						left: 0,
-						zIndex: 100000,
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						backgroundColor: "rgba(0,0,0,0.7)",
-						backdropFilter: "blur(4px)",
-						padding: "16px",
-					}}
-				>
-					<div
-						data-lenis-prevent="true"
-						onClick={(e) => e.stopPropagation()}
-						className="w-full max-w-sm rounded-card border border-border p-5 shadow-2xl space-y-4"
-						style={{
-							width: "100%",
-							maxWidth: "384px",
-							backgroundColor: tokens.surface,
-							color: tokens.textPrimary,
-							borderRadius: tokens.radius,
-							padding: "20px",
-							display: "flex",
-							flexDirection: "column",
-							gap: "16px",
-						}}
-					>
-						<div
-							className="flex items-center justify-between"
-							style={{
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "space-between",
-							}}
-						>
-							<h4 className="font-semibold text-sm font-heading m-0">
-								Publish Theme Globally
-							</h4>
-							<button
-								type="button"
-								onClick={() => setShowGlobalModal(false)}
-								className="text-text-muted hover:text-text-primary border-0 bg-transparent cursor-pointer p-0"
-								style={{
-									color: tokens.textMuted,
-									cursor: "pointer",
-									background: "transparent",
-									border: "none",
-								}}
-							>
-								<HugeiconsIcon icon={Cancel01Icon} size={16} />
-							</button>
-						</div>
-
-						<p
-							className="text-xs leading-relaxed m-0"
-							style={{ color: tokens.textMuted }}
-						>
-							This will set the current theme as the permanent global default
-							for all visiting users across the application.
-						</p>
-
-						<form
-							onSubmit={handleSaveGlobalTheme}
-							className="space-y-3"
-							style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-						>
-							<div>
-								<span
-									className="text-xs block mb-1 font-medium"
-									style={{
-										color: tokens.textMuted,
-										display: "block",
-										marginBottom: "4px",
-									}}
-								>
-									Admin Password
-								</span>
-								<div className="relative">
-									<input
-										type={showAdminPassword ? "text" : "password"}
-										value={adminPassword}
-										onChange={(e) => setAdminPassword(e.target.value)}
-										placeholder="Enter admin password..."
-										className="w-full px-3 py-2 text-xs rounded bg-canvas border border-border text-text-primary pr-14"
-										style={{
-											backgroundColor: tokens.canvas,
-											borderColor: tokens.border,
-											color: tokens.textPrimary,
-											width: "100%",
-											padding: "8px 12px",
-											borderRadius: tokens.radius,
-											boxSizing: "border-box",
-										}}
-									/>
-									<button
-										type="button"
-										onClick={() => setShowAdminPassword(!showAdminPassword)}
-										className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-primary hover:underline border-0 bg-transparent cursor-pointer"
-										style={{
-											position: "absolute",
-											right: "8px",
-											top: "50%",
-											transform: "translateY(-50%)",
-											background: "transparent",
-											border: "none",
-											color: tokens.primary,
-											cursor: "pointer",
-										}}
-									>
-										{showAdminPassword ? "Hide" : "Show"}
-									</button>
-								</div>
-							</div>
-
-							{publishFeedback && (
-								<p
-									className={`text-xs p-2 rounded ${
-										publishFeedback.type === "success"
-											? "bg-success/15 text-success border border-success/30"
-											: "bg-danger/15 text-danger border border-danger/30"
-									}`}
-									style={{
-										padding: "8px",
-										borderRadius: tokens.radius,
-										fontSize: "12px",
-										margin: 0,
-									}}
-								>
-									{publishFeedback.message}
-								</p>
-							)}
-
-							<div
-								className="flex items-center gap-2 pt-2"
-								style={{
-									display: "flex",
-									alignItems: "center",
-									gap: "8px",
-									paddingTop: "8px",
-								}}
-							>
-								<button
-									type="button"
-									onClick={() => setShowGlobalModal(false)}
-									className="flex-1 py-2 text-xs rounded border border-border hover:bg-card transition-colors cursor-pointer"
-									style={{
-										flex: 1,
-										padding: "8px",
-										borderRadius: tokens.radius,
-										cursor: "pointer",
-										background: "transparent",
-										border: `1px solid ${tokens.border || "var(--border)"}`,
-										color: tokens.textPrimary,
-									}}
-								>
-									Cancel
-								</button>
-								<button
-									type="submit"
-									disabled={isPublishing}
-									className="flex-1 py-2 text-xs rounded bg-primary text-canvas font-medium hover:opacity-90 disabled:opacity-50 transition-opacity cursor-pointer border-0"
-									style={{
-										flex: 1,
-										padding: "8px",
-										borderRadius: tokens.radius,
-										backgroundColor: tokens.primary,
-										color: tokens.canvas,
-										fontWeight: 600,
-										cursor: isPublishing ? "not-allowed" : "pointer",
-										border: "none",
-									}}
-								>
-									{isPublishing ? "Publishing..." : "Confirm & Set"}
-								</button>
-							</div>
-						</form>
-					</div>
-				</div>
-			)}
 		</div>
 	);
-}
-
-async function searchFontsourceFonts(
-	query: string,
-	category: string,
-): Promise<FontsourceItem[]> {
-	const trimmed = query.trim().toLowerCase();
-	let results = POPULAR_FONTSOURCE_FONTS;
-
-	if (category !== "all") {
-		results = results.filter((f) => f.category === category);
-	}
-	if (trimmed) {
-		results = results.filter((f) => f.family.toLowerCase().includes(trimmed));
-	}
-
-	return results;
 }
 
 export default ThemeStudioDrawer;
