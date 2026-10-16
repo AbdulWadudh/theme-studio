@@ -143,6 +143,21 @@ describe("@k79/theme-studio tactile physics, shadows & glow controls", () => {
 		expect(DEFINED_RADIUS_OPTIONS).toHaveLength(6);
 	});
 
+	test("guarantees all defaultPresets strictly use predefined radius options", () => {
+		for (const preset of defaultPresets) {
+			if (preset.tokens.radius) {
+				expect(DEFINED_RADIUS_OPTIONS).toContain(
+					preset.tokens.radius as (typeof DEFINED_RADIUS_OPTIONS)[number],
+				);
+			}
+			if (preset.lightTokens?.radius) {
+				expect(DEFINED_RADIUS_OPTIONS).toContain(
+					preset.lightTokens.radius as (typeof DEFINED_RADIUS_OPTIONS)[number],
+				);
+			}
+		}
+	});
+
 	test("exports tactile physics CSS rules and generator function", () => {
 		expect(TACTILE_CSS_RULES).toContain(".tactile-always-active");
 		expect(TACTILE_CSS_RULES).toContain('[data-tactile="true"]');

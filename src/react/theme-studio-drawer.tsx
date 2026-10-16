@@ -163,6 +163,7 @@ export function ThemeStudioDrawer() {
 		closeStudio,
 		theme,
 		resolvedMode,
+		setMode,
 		tokens,
 		themes,
 		setTheme,
@@ -269,6 +270,31 @@ button[data-colorshot-field],
 [data-colorshot-field] [data-part="field-alpha"],
 [data-colorshot-field] [data-part="field-swatch"] {
 	display: none !important;
+}
+
+/* Sleek custom muted scrollbar for Theme Studio */
+.theme-studio-scroll {
+	scrollbar-width: thin !important;
+	scrollbar-color: rgba(148, 163, 184, 0.25) transparent !important;
+}
+.theme-studio-scroll::-webkit-scrollbar {
+	width: 5px !important;
+	height: 5px !important;
+}
+.theme-studio-scroll::-webkit-scrollbar-track {
+	background: transparent !important;
+}
+.theme-studio-scroll::-webkit-scrollbar-thumb {
+	background-color: rgba(148, 163, 184, 0.25) !important;
+	border-radius: 9999px !important;
+}
+.theme-studio-scroll::-webkit-scrollbar-thumb:hover {
+	background-color: rgba(148, 163, 184, 0.45) !important;
+}
+.theme-studio-scroll::-webkit-scrollbar-button {
+	display: none !important;
+	width: 0 !important;
+	height: 0 !important;
 }
 `;
 			document.head.appendChild(style);
@@ -515,28 +541,56 @@ button[data-colorshot-field],
 							</p>
 						</div>
 					</div>
-					<button
-						type="button"
-						onClick={closeStudio}
-						className="p-1 rounded-btn hover:bg-card transition-colors cursor-pointer border-0 bg-transparent"
-						style={{
-							color: tokens.textPrimary,
-							cursor: "pointer",
-							background: "transparent",
-							border: "none",
-							padding: "4px",
-						}}
-						aria-label="Close Theme Studio"
-					>
-						<HugeiconsIcon icon={Cancel01Icon} size={18} />
-					</button>
+					<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+						{/* APPEARANCE MODE TOGGLE */}
+						<button
+							type="button"
+							onClick={() =>
+								setMode(resolvedMode === "dark" ? "light" : "dark")
+							}
+							className="px-2 py-1 text-xs font-semibold rounded-btn border border-border hover:bg-card transition-colors cursor-pointer flex items-center gap-1.5"
+							style={{
+								backgroundColor: tokens.card,
+								border: `1px solid ${tokens.border || "var(--border)"}`,
+								color: tokens.textPrimary,
+								borderRadius: tokens.radius,
+								display: "flex",
+								alignItems: "center",
+								gap: "6px",
+								padding: "4px 8px",
+								fontSize: "11px",
+								fontWeight: 600,
+								cursor: "pointer",
+								userSelect: "none",
+								transition: "all 0.15s ease",
+							}}
+							title={`Switch to ${resolvedMode === "dark" ? "Light" : "Dark"} Mode`}
+						>
+							<span>{resolvedMode === "dark" ? "🌙 Dark" : "☀️ Light"}</span>
+						</button>
+						<button
+							type="button"
+							onClick={closeStudio}
+							className="p-1 rounded-btn hover:bg-card transition-colors cursor-pointer border-0 bg-transparent"
+							style={{
+								color: tokens.textPrimary,
+								cursor: "pointer",
+								background: "transparent",
+								border: "none",
+								padding: "4px",
+							}}
+							aria-label="Close Theme Studio"
+						>
+							<HugeiconsIcon icon={Cancel01Icon} size={18} />
+						</button>
+					</div>
 				</div>
 
 				{/* SCROLLABLE SHEET BODY */}
 				<div
 					data-lenis-prevent="true"
 					onWheel={(e) => e.stopPropagation()}
-					className="flex-1 overflow-y-auto min-h-0 overscroll-contain"
+					className="theme-studio-scroll flex-1 overflow-y-auto min-h-0 overscroll-contain"
 					style={{
 						flex: 1,
 						overflowY: "auto",
@@ -544,6 +598,8 @@ button[data-colorshot-field],
 						display: "flex",
 						flexDirection: "column",
 						gap: "14px",
+						scrollbarWidth: "thin",
+						scrollbarColor: "rgba(148, 163, 184, 0.25) transparent",
 					}}
 				>
 					{/* SECTION 1: PALETTES & PRESETS */}
@@ -565,112 +621,116 @@ button[data-colorshot-field],
 								gap: "6px",
 							}}
 						>
-							{themes.map((p: ThemeDefinition<BaseTokens>) => {
-								const isSelected = theme === p.id;
-								const previewColors =
-									isLight && p.lightTokens
-										? { ...p.tokens, ...p.lightTokens }
-										: p.tokens;
+							{themes
+								.filter(
+									(p: ThemeDefinition<BaseTokens>) => p.id !== "light-clean",
+								)
+								.map((p: ThemeDefinition<BaseTokens>) => {
+									const isSelected = theme === p.id;
+									const previewColors =
+										isLight && p.lightTokens
+											? { ...p.tokens, ...p.lightTokens }
+											: p.tokens;
 
-								return (
-									<button
-										type="button"
-										key={p.id}
-										onClick={() => selectPreset(p.id)}
-										className={`text-left rounded-card border text-xs transition-all cursor-pointer flex flex-col justify-between ${
-											isSelected
-												? "border-primary ring-1 ring-primary"
-												: "border-border hover:border-text-muted"
-										}`}
-										style={{
-											backgroundColor: tokens.card,
-											borderRadius: tokens.radius,
-											padding: "10px 12px",
-											display: "flex",
-											flexDirection: "column",
-											justifyContent: "space-between",
-											minHeight: "52px",
-											textAlign: "left",
-										}}
-									>
-										<div
+									return (
+										<button
+											type="button"
+											key={p.id}
+											onClick={() => selectPreset(p.id)}
+											className={`text-left rounded-card border text-xs transition-all cursor-pointer flex flex-col justify-between ${
+												isSelected
+													? "border-primary ring-1 ring-primary"
+													: "border-border hover:border-text-muted"
+											}`}
 											style={{
+												backgroundColor: tokens.card,
+												borderRadius: tokens.radius,
+												padding: "10px 12px",
 												display: "flex",
-												alignItems: "center",
+												flexDirection: "column",
 												justifyContent: "space-between",
-												marginBottom: "6px",
+												minHeight: "52px",
+												textAlign: "left",
 											}}
 										>
-											<span className="font-semibold font-heading">
-												{p.name}
-											</span>
-											{isSelected && (
-												<HugeiconsIcon
-													icon={CheckmarkBadge01Icon}
-													size={14}
-													className="text-primary"
+											<div
+												style={{
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "space-between",
+													marginBottom: "6px",
+												}}
+											>
+												<span className="font-semibold font-heading">
+													{p.name}
+												</span>
+												{isSelected && (
+													<HugeiconsIcon
+														icon={CheckmarkBadge01Icon}
+														size={14}
+														className="text-primary"
+													/>
+												)}
+											</div>
+											<div
+												style={{
+													display: "flex",
+													alignItems: "center",
+													gap: "6px",
+												}}
+											>
+												<span
+													style={{
+														width: "14px",
+														height: "14px",
+														minWidth: "14px",
+														minHeight: "14px",
+														borderRadius: "9999px",
+														backgroundColor: previewColors.canvas,
+														display: "inline-block",
+														flexShrink: 0,
+													}}
 												/>
-											)}
-										</div>
-										<div
-											style={{
-												display: "flex",
-												alignItems: "center",
-												gap: "6px",
-											}}
-										>
-											<span
-												style={{
-													width: "14px",
-													height: "14px",
-													minWidth: "14px",
-													minHeight: "14px",
-													borderRadius: "9999px",
-													backgroundColor: previewColors.canvas,
-													display: "inline-block",
-													flexShrink: 0,
-												}}
-											/>
-											<span
-												style={{
-													width: "14px",
-													height: "14px",
-													minWidth: "14px",
-													minHeight: "14px",
-													borderRadius: "9999px",
-													backgroundColor: previewColors.primary,
-													display: "inline-block",
-													flexShrink: 0,
-												}}
-											/>
-											<span
-												style={{
-													width: "14px",
-													height: "14px",
-													minWidth: "14px",
-													minHeight: "14px",
-													borderRadius: "9999px",
-													backgroundColor: previewColors.secondary,
-													display: "inline-block",
-													flexShrink: 0,
-												}}
-											/>
-											<span
-												style={{
-													width: "14px",
-													height: "14px",
-													minWidth: "14px",
-													minHeight: "14px",
-													borderRadius: "9999px",
-													backgroundColor: previewColors.accent,
-													display: "inline-block",
-													flexShrink: 0,
-												}}
-											/>
-										</div>
-									</button>
-								);
-							})}
+												<span
+													style={{
+														width: "14px",
+														height: "14px",
+														minWidth: "14px",
+														minHeight: "14px",
+														borderRadius: "9999px",
+														backgroundColor: previewColors.primary,
+														display: "inline-block",
+														flexShrink: 0,
+													}}
+												/>
+												<span
+													style={{
+														width: "14px",
+														height: "14px",
+														minWidth: "14px",
+														minHeight: "14px",
+														borderRadius: "9999px",
+														backgroundColor: previewColors.secondary,
+														display: "inline-block",
+														flexShrink: 0,
+													}}
+												/>
+												<span
+													style={{
+														width: "14px",
+														height: "14px",
+														minWidth: "14px",
+														minHeight: "14px",
+														borderRadius: "9999px",
+														backgroundColor: previewColors.accent,
+														display: "inline-block",
+														flexShrink: 0,
+													}}
+												/>
+											</div>
+										</button>
+									);
+								})}
 						</div>
 					</div>
 
@@ -928,12 +988,15 @@ button[data-colorshot-field],
 									</div>
 
 									<div
+										className="theme-studio-scroll"
 										style={{
 											maxHeight: "180px",
 											overflowY: "auto",
 											display: "flex",
 											flexDirection: "column",
 											gap: "4px",
+											scrollbarWidth: "thin",
+											scrollbarColor: "rgba(148, 163, 184, 0.25) transparent",
 										}}
 									>
 										{isLoadingFonts ? (
