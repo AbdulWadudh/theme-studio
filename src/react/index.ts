@@ -1,3 +1,4 @@
+export * from "./color-picker-field";
 export * from "./context";
 export * from "./floating-trigger";
 export * from "./icons";

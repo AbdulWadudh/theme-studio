@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "./use-theme";
 
 export interface ThemePlaygroundProps {
@@ -21,6 +21,8 @@ export function ThemePlayground({
 	}
 
 	const [localCount, setLocalCount] = useState(0);
+	const [tactileClicks, setTactileClicks] = useState(0);
+	const [showPulseFeedback, setShowPulseFeedback] = useState(false);
 	const [localTab, setLocalTab] = useState<
 		"overview" | "components" | "tokens"
 	>("overview");
@@ -29,7 +31,7 @@ export function ThemePlayground({
 	const [localTactile, setLocalTactile] = useState(false);
 
 	const theme = themeContext ? themeContext.theme : "dark-slate";
-	const mode = themeContext ? themeContext.mode : localMode;
+	const _mode = themeContext ? themeContext.mode : localMode;
 	const resolvedMode = themeContext ? themeContext.resolvedMode : localMode;
 	const tokens = themeContext ? themeContext.tokens : null;
 	const hasCustomizations = themeContext
@@ -38,6 +40,41 @@ export function ThemePlayground({
 	const isTactile = themeContext
 		? Boolean(tokens?.tactile === "true")
 		: localTactile;
+
+	useEffect(() => {
+		if (typeof document === "undefined") return;
+		const id = "k79-theme-studio-tactile-style";
+		if (!document.getElementById(id)) {
+			const style = document.createElement("style");
+			style.id = id;
+			style.textContent = `
+.tactile-always-active,
+[data-tactile="true"] button:not(:disabled):not([data-no-tactile]),
+[data-tactile="true"] [role="button"]:not([data-no-tactile]),
+[data-tactile="true"] .tactile-item {
+	box-shadow: 4px 4px 0px 0px #000000 !important;
+	border-color: #000000 !important;
+	border-width: 2px !important;
+	transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 120ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.tactile-always-active:hover,
+[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):hover,
+[data-tactile="true"] [role="button"]:not([data-no-tactile]):hover,
+[data-tactile="true"] .tactile-item:hover {
+	transform: translate(2px, 2px) !important;
+	box-shadow: 2px 2px 0px 0px #000000 !important;
+}
+.tactile-always-active:active,
+[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):active,
+[data-tactile="true"] [role="button"]:not([data-no-tactile]):active,
+[data-tactile="true"] .tactile-item:active {
+	transform: translate(4px, 4px) !important;
+	box-shadow: 0px 0px 0px 0px #000000 !important;
+}
+`;
+			document.head.appendChild(style);
+		}
+	}, []);
 
 	const toggleTactile = () => {
 		const nextTactile = !isTactile;
@@ -59,164 +96,118 @@ export function ThemePlayground({
 			themeContext.setMode(next);
 		} else {
 			setLocalMode(next);
-			if (typeof document !== "undefined") {
-				document.documentElement.classList.remove("light", "dark");
-				document.documentElement.classList.add(next);
-			}
 		}
 	};
 
-	const presets = [
-		{ id: "dark-slate", name: "Dark Slate" },
-		{ id: "neobrutalism", name: "Neobrutalism" },
-		{ id: "nord", name: "Nord" },
-		{ id: "terminal-emerald", name: "Terminal Emerald" },
-		{ id: "obsidian-cyber", name: "Obsidian Cyber" },
-		{ id: "light-clean", name: "Clean Light" },
-	];
-
 	return (
-		<main
-			className={
-				"min-h-screen p-6 sm:p-10 max-w-5xl mx-auto space-y-8 font-sans " +
-				className
-			}
-			style={{ fontFamily: tokens?.fontBody || "inherit" }}
+		<div
+			className={`w-full max-w-5xl mx-auto p-6 space-y-8 font-sans ${className}`}
 		>
-			{/* HEADER */}
-			<header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border">
+			{/* HEADER & QUICK CONTROLS */}
+			<div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl bg-surface border border-border">
 				<div>
 					<div className="flex items-center gap-2">
-						<h1
-							className="text-2xl font-bold tracking-tight text-text-primary"
-							style={{
-								fontFamily: tokens?.fontHeading || "inherit",
-							}}
-						>
+						<span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
+						<h1 className="text-xl font-bold tracking-tight text-text-primary">
 							{title}
 						</h1>
-						<span className="text-xs px-2 py-0.5 rounded-lg font-mono font-bold bg-primary text-canvas">
-							{themeContext ? "Studio Active" : "Pre-Init Standby"}
-						</span>
 					</div>
-					<p className="text-sm text-text-muted mt-1">
-						Client-Side Theme Engine, Live Customizer & Physics Tester
+					<p className="text-xs text-text-muted mt-1">
+						Active Theme:{" "}
+						<span className="font-semibold text-primary">{theme}</span> |
+						Appearance: <span className="capitalize">{resolvedMode}</span>
+						{isTactile && (
+							<span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary text-canvas">
+								TACTILE PHYSICS ACTIVE
+							</span>
+						)}
 					</p>
 				</div>
 
-				<div className="flex flex-wrap items-center gap-2.5">
-					{/* DIRECT ON-SCREEN TACTILE TOGGLE */}
-					<button
-						type="button"
-						onClick={toggleTactile}
-						className={`px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer transition-colors ${
-							isTactile
-								? "bg-accent text-canvas border-accent"
-								: "bg-surface text-text-muted border-border hover:text-text-primary"
-						}`}
-					>
-						{isTactile ? "⚡ Tactile: ON" : "⚪ Tactile: OFF"}
-					</button>
-
-					{/* APPEARANCE MODE TOGGLE */}
+				<div className="flex flex-wrap items-center gap-2">
 					<button
 						type="button"
 						onClick={toggleMode}
-						className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface text-text-primary border border-border cursor-pointer hover:bg-card"
+						className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-card text-text-primary border border-border hover:bg-surface cursor-pointer transition-colors"
 					>
-						{resolvedMode === "dark" ? "☀️ Light" : "🌙 Dark"}
+						Mode: {resolvedMode === "dark" ? "🌙 Dark" : "☀️ Light"}
 					</button>
 
-					{/* OPEN STUDIO DRAWER */}
 					<button
 						type="button"
-						onClick={() => themeContext?.openStudio()}
-						disabled={!themeContext}
-						className="px-4 py-2 rounded-lg text-xs font-semibold bg-primary text-canvas cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+						onClick={toggleTactile}
+						className={`px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer transition-all ${
+							isTactile
+								? "bg-primary text-canvas border-primary font-bold shadow-sm"
+								: "bg-card text-text-primary border-border hover:bg-surface"
+						}`}
 					>
-						{themeContext ? "Open Theme Studio" : "Run CLI to Enable Studio"}
+						Tactile: {isTactile ? "⚡ Enabled" : "Off"}
 					</button>
-				</div>
-			</header>
 
-			{/* QUICK PRESET SWITCHER */}
-			<div className="space-y-2">
-				<div className="text-[11px] font-mono uppercase tracking-wider text-text-muted">
-					Quick Preset Switcher:
-				</div>
-				<div className="flex flex-wrap gap-2">
-					{presets.map((p) => (
+					{themeContext && (
 						<button
-							key={p.id}
 							type="button"
-							onClick={() => themeContext?.setTheme(p.id)}
-							disabled={!themeContext}
-							className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors cursor-pointer disabled:opacity-60 ${
-								theme === p.id
-									? "bg-primary text-canvas border-primary font-semibold"
-									: "bg-card text-text-primary border-border hover:border-primary"
-							}`}
+							onClick={themeContext.openStudio}
+							className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-primary text-canvas shadow-md hover:opacity-90 cursor-pointer transition-opacity"
 						>
-							{p.name}
+							🎨 Open Theme Studio
 						</button>
-					))}
+					)}
 				</div>
 			</div>
 
-			{/* ACTIVE STATE OVERVIEW */}
-			<div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-				<div
-					className="p-4 rounded-lg bg-surface border border-border"
-					style={{ boxShadow: "var(--shadow-sm)" }}
-				>
-					<div className="text-[10px] text-text-muted uppercase font-mono">
-						Active Theme
-					</div>
-					<div className="text-sm font-semibold capitalize text-text-primary mt-1">
-						{theme}
+			{/* KPI METRIC STAT CARDS */}
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+				<div className="p-4 rounded-xl bg-card border border-border space-y-1">
+					<span className="text-xs font-medium text-text-muted">
+						Monthly Recurring
+					</span>
+					<div className="text-2xl font-bold text-text-primary">$48,290</div>
+					<div className="text-xs text-success font-semibold flex items-center gap-1">
+						↑ +14.2% from last month
 					</div>
 				</div>
-				<div
-					className="p-4 rounded-lg bg-surface border border-border"
-					style={{ boxShadow: "var(--shadow-sm)" }}
-				>
-					<div className="text-[10px] text-text-muted uppercase font-mono">
-						Resolved Mode
-					</div>
-					<div className="text-sm font-semibold capitalize text-text-primary mt-1">
-						{mode} ({resolvedMode})
-					</div>
-				</div>
-				<div
-					onClick={toggleTactile}
-					className="p-4 rounded-lg bg-surface border border-border cursor-pointer hover:border-accent transition-colors"
-					style={{ boxShadow: "var(--shadow-sm)" }}
-				>
-					<div className="text-[10px] text-text-muted uppercase font-mono flex items-center justify-between">
-						<span>Tactile Physics</span>
-						<span className="text-[9px] underline">click to toggle</span>
-					</div>
-					<div className="text-sm font-semibold text-accent mt-1">
-						{isTactile ? "⚡ Enabled" : "Disabled"}
+
+				<div className="p-4 rounded-xl bg-card border border-border space-y-1">
+					<span className="text-xs font-medium text-text-muted">
+						Active Sessions
+					</span>
+					<div className="text-2xl font-bold text-text-primary">1,429</div>
+					<div className="text-xs text-primary font-semibold flex items-center gap-1">
+						● Real-time telemetry
 					</div>
 				</div>
-				<div
-					className="p-4 rounded-lg bg-surface border border-border"
-					style={{ boxShadow: "var(--shadow-sm)" }}
-				>
-					<div className="text-[10px] text-text-muted uppercase font-mono">
-						Custom Modifications
+
+				<div className="p-4 rounded-xl bg-card border border-border space-y-1">
+					<span className="text-xs font-medium text-text-muted">
+						Conversion Rate
+					</span>
+					<div className="text-2xl font-bold text-text-primary">3.84%</div>
+					<div className="text-xs text-warning font-semibold flex items-center gap-1">
+						⚡ Optimizing checkout
 					</div>
-					<div className="text-sm font-semibold text-primary mt-1">
-						{hasCustomizations ? "Modified" : "Default"}
+				</div>
+
+				<div className="p-4 rounded-xl bg-card border border-border space-y-1">
+					<span className="text-xs font-medium text-text-muted">
+						Customized Tokens
+					</span>
+					<div className="text-2xl font-bold text-text-primary">
+						{hasCustomizations ? "Active" : "Standard"}
+					</div>
+					<div className="text-xs text-accent font-semibold flex items-center gap-1">
+						{tokens?.radius || "0.625rem"} radius curve
 					</div>
 				</div>
 			</div>
 
-			{/* INTERACTIVE COMPONENT SHOWCASE */}
-			<section
-				className="p-6 rounded-card bg-surface border border-border space-y-6"
-				style={{ boxShadow: "var(--shadow)" }}
+			{/* INTERACTIVE SHOWCASE & COMPONENT DEMOS */}
+			<div
+				className="p-6 rounded-2xl bg-surface border border-border space-y-6"
+				style={{
+					boxShadow: tokens?.shadow || "var(--shadow, none)",
+				}}
 			>
 				<div className="flex items-center justify-between border-b border-border pb-4">
 					<div>
@@ -272,6 +263,30 @@ export function ThemePlayground({
 						>
 							⚡ Toggle Tactile ({isTactile ? "ON" : "OFF"})
 						</button>
+						{/* Interactive Mechanical Physics Tester */}
+						<button
+							type="button"
+							onClick={() => {
+								setTactileClicks((c) => c + 1);
+								setShowPulseFeedback(true);
+								setTimeout(() => setShowPulseFeedback(false), 500);
+								if (typeof window !== "undefined" && "vibrate" in navigator) {
+									navigator.vibrate?.(20);
+								}
+							}}
+							className={`tactile-item tactile-always-active px-4 py-2 text-xs font-mono font-bold rounded-lg border-2 border-black transition-all cursor-pointer select-none ${
+								showPulseFeedback
+									? "bg-accent text-canvas"
+									: "bg-primary text-canvas"
+							}`}
+							style={{
+								boxShadow: "4px 4px 0px 0px #000000",
+							}}
+						>
+							{showPulseFeedback
+								? "💥 Pulse Registered!"
+								: `Mechanical Physics (${tactileClicks})`}
+						</button>
 						<button
 							type="button"
 							onClick={() => setIsAlertOpen(true)}
@@ -294,201 +309,108 @@ export function ThemePlayground({
 					</div>
 				</div>
 
-				{/* CARD GRID */}
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-					<div
-						className="p-5 rounded-lg bg-card border border-border flex flex-col justify-between transition-all"
-						style={{ boxShadow: "var(--shadow)" }}
-					>
-						<div className="space-y-2">
-							<div className="w-7 h-7 rounded-lg bg-primary text-canvas flex items-center justify-center font-bold text-xs">
-								01
-							</div>
-							<h3 className="font-semibold text-sm text-text-primary">
-								Surface & Canvas
-							</h3>
-							<p className="text-xs text-text-muted leading-relaxed">
-								Tokens adapt seamlessly across dark and light palettes with
-								instant CSS variable updates.
-							</p>
-						</div>
-						<div className="pt-4 mt-auto">
-							<button
-								type="button"
-								onClick={() => setLocalCount((c) => c + 1)}
-								className="w-full py-2 text-xs font-semibold rounded-lg bg-primary text-canvas border border-border cursor-pointer"
-							>
-								Confirm ({localCount})
-							</button>
-						</div>
+				{/* BADGES & CHIPS */}
+				<div className="space-y-3">
+					<div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
+						Status Badges & Tokens:
 					</div>
-
-					<div
-						className="p-5 rounded-lg bg-card border border-border flex flex-col justify-between transition-all"
-						style={{ boxShadow: "var(--shadow)" }}
-					>
-						<div className="space-y-2">
-							<div className="w-7 h-7 rounded-lg bg-secondary text-canvas flex items-center justify-center font-bold text-xs">
-								02
-							</div>
-							<h3 className="font-semibold text-sm text-text-primary">
-								Cross-Tab Broadcast
-							</h3>
-							<p className="text-xs text-text-muted leading-relaxed">
-								Open another browser tab and adjust colors to see synchronized
-								theme updates.
-							</p>
-						</div>
-						<div className="pt-4 mt-auto">
-							<button
-								type="button"
-								onClick={toggleTactile}
-								className="w-full py-2 text-xs font-semibold rounded-lg bg-secondary text-canvas border border-border cursor-pointer"
-							>
-								{isTactile ? "Disable Physics" : "Enable Physics"}
-							</button>
-						</div>
-					</div>
-
-					<div
-						className="p-5 rounded-lg bg-card border border-border flex flex-col justify-between transition-all"
-						style={{ boxShadow: "var(--shadow)" }}
-					>
-						<div className="space-y-2">
-							<div className="w-7 h-7 rounded-lg bg-danger text-canvas flex items-center justify-center font-bold text-xs">
-								03
-							</div>
-							<h3 className="font-semibold text-sm text-text-primary">
-								Alert Confirmation
-							</h3>
-							<p className="text-xs text-text-muted leading-relaxed">
-								Test modal overlay dialogs with theme tokens and backdrop blur.
-							</p>
-						</div>
-						<div className="pt-4 mt-auto">
-							<button
-								type="button"
-								onClick={() => setIsAlertOpen(true)}
-								className="w-full py-2 text-xs font-semibold rounded-lg bg-danger text-canvas border border-border cursor-pointer"
-							>
-								Open Alert Dialog
-							</button>
-						</div>
+					<div className="flex flex-wrap items-center gap-2">
+						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-primary text-canvas">
+							Primary Badge
+						</span>
+						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-secondary text-canvas">
+							Secondary
+						</span>
+						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-success text-canvas">
+							Success State
+						</span>
+						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-warning text-canvas">
+							Warning State
+						</span>
+						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-danger text-canvas">
+							Danger State
+						</span>
+						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-accent text-canvas">
+							Accent Glow
+						</span>
 					</div>
 				</div>
 
-				{/* FORM INPUTS & BADGES */}
-				<div className="space-y-3 pt-2 border-t border-border">
+				{/* FORM INPUT CONTROLS */}
+				<div className="space-y-3">
 					<div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
-						Form Controls & Status Badges:
+						Form Controls & Text Input:
 					</div>
-					<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div>
-							<label className="text-xs text-text-muted block mb-1">
-								Text Field
+							<label
+								htmlFor="playground-email"
+								className="block text-xs font-semibold text-text-primary mb-1"
+							>
+								Email Address
 							</label>
 							<input
-								type="text"
-								placeholder="Type here..."
-								defaultValue="Custom Theme Input"
-								className="w-full px-3 py-1.5 text-xs rounded-lg bg-card text-text-primary border border-border focus:outline-hidden focus:border-primary"
+								id="playground-email"
+								type="email"
+								placeholder="developer@antigravity.io"
+								className="w-full px-3 py-2 text-xs rounded-lg bg-card border border-border text-text-primary focus:outline-none focus:border-primary"
 							/>
 						</div>
 						<div>
-							<label className="text-xs text-text-muted block mb-1">
-								Semantic Badges
+							<label
+								htmlFor="playground-status"
+								className="block text-xs font-semibold text-text-primary mb-1"
+							>
+								Project Environment
 							</label>
-							<div className="flex gap-2 items-center pt-1">
-								<span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-success text-canvas">
-									Success
-								</span>
-								<span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-warning text-canvas">
-									Warning
-								</span>
-								<span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-danger text-canvas">
-									Danger
-								</span>
-							</div>
-						</div>
-						<div>
-							<label className="text-xs text-text-muted block mb-1">
-								Accent Badge
-							</label>
-							<div className="flex gap-2 items-center pt-1">
-								<span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-accent text-canvas">
-									Accent Glow
-								</span>
-								<span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary text-canvas">
-									Primary
-								</span>
-							</div>
+							<select
+								id="playground-status"
+								className="w-full px-3 py-2 text-xs rounded-lg bg-card border border-border text-text-primary focus:outline-none focus:border-primary cursor-pointer"
+							>
+								<option>Production (US-East)</option>
+								<option>Staging Preview</option>
+								<option>Local Canary</option>
+							</select>
 						</div>
 					</div>
 				</div>
-			</section>
+			</div>
 
-			{/* ALERT DIALOG MODAL */}
+			{/* SIMULATED ALERT MODAL */}
 			{isAlertOpen && (
-				<div
-					role="dialog"
-					aria-modal="true"
-					onClick={() => setIsAlertOpen(false)}
-					className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-xs"
-				>
-					<div
-						onClick={(e) => e.stopPropagation()}
-						className="w-full max-w-md p-6 bg-card border border-border rounded-lg space-y-4"
-						style={{ boxShadow: "var(--shadow-lg)" }}
-					>
-						<div className="space-y-2">
-							<div className="flex items-center justify-between">
-								<h3
-									className="text-lg font-bold text-text-primary"
-									style={{
-										fontFamily: tokens?.fontHeading || "inherit",
-									}}
-								>
-									Are you absolutely sure?
-								</h3>
-								<span className="text-xs font-mono font-bold px-2 py-0.5 rounded-sm bg-danger text-canvas">
-									Alert Dialog
-								</span>
-							</div>
-							<p className="text-xs text-text-muted leading-relaxed">
-								This action cannot be undone. This will reset all customizations
-								and tokens to the active preset default.
-							</p>
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+					<div className="w-full max-w-sm p-6 rounded-2xl bg-surface border border-border shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+						<div className="flex items-center gap-2">
+							<span className="text-danger font-bold text-lg">⚠️</span>
+							<h3 className="text-base font-bold text-text-primary">
+								Destructive Action Test
+							</h3>
 						</div>
-
-						<div className="flex items-center justify-end gap-3 pt-2">
+						<p className="text-xs text-text-muted leading-relaxed">
+							This simulated alert dialog confirms that modal overlays,
+							backdrops, borders, and danger colors honor your active studio
+							tokens correctly.
+						</p>
+						<div className="flex items-center justify-end gap-2 pt-2">
 							<button
 								type="button"
 								onClick={() => setIsAlertOpen(false)}
-								className="px-4 py-2 text-xs font-semibold rounded-lg bg-card text-text-primary border border-border hover:bg-surface cursor-pointer"
+								className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-card text-text-primary border border-border hover:bg-surface cursor-pointer"
 							>
 								Cancel
 							</button>
 							<button
 								type="button"
 								onClick={() => setIsAlertOpen(false)}
-								className="px-4 py-2 text-xs font-semibold rounded-lg bg-danger text-canvas border border-border hover:opacity-90 cursor-pointer"
+								className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-danger text-canvas cursor-pointer hover:opacity-90"
 							>
-								Continue
+								Confirm
 							</button>
 						</div>
 					</div>
 				</div>
 			)}
-
-			{/* FOOTER */}
-			<footer className="p-4 rounded-lg bg-surface border border-border flex items-center justify-between text-xs text-text-muted">
-				<span>
-					✨ <strong>Floating Palette:</strong> Click the floating icon at
-					bottom-right to open Theme Studio.
-				</span>
-				<span className="font-mono text-[11px]">{title}</span>
-			</footer>
-		</main>
+		</div>
 	);
 }
 

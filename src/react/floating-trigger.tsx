@@ -1,8 +1,9 @@
 "use client";
 
+import { PaintBoardIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type React from "react";
 import type { ThemeStudioConfig } from "../core/types";
-import { SwatchIcon } from "./icons";
 import { useTheme } from "./use-theme";
 
 interface FloatingStudioTriggerProps {
@@ -42,17 +43,17 @@ export function FloatingStudioTrigger({ config }: FloatingStudioTriggerProps) {
 			title="Theme Studio"
 			style={{
 				...stylePosition,
-				width: "48px",
-				height: "48px",
+				width: "44px",
+				height: "44px",
 				borderRadius: "50%",
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				backgroundColor: "var(--card)",
-				borderColor: "var(--border)",
+				backgroundColor: "var(--surface, #111827)",
+				borderColor: "var(--border, #1E293B)",
 				borderWidth: "1px",
 				borderStyle: "solid",
-				color: "var(--primary)",
+				color: "var(--primary, #38BDF8)",
 				boxShadow:
 					"0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3)",
 				cursor: "pointer",
@@ -60,9 +61,9 @@ export function FloatingStudioTrigger({ config }: FloatingStudioTriggerProps) {
 				WebkitBackdropFilter: "blur(12px)",
 				transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
 			}}
-			className={config?.className}
+			className={`group ${config?.className || ""}`}
 			onMouseEnter={(e) => {
-				e.currentTarget.style.transform = "scale(1.08) translateY(-2px)";
+				e.currentTarget.style.transform = "scale(1.1) translateY(-2px)";
 				e.currentTarget.style.boxShadow =
 					"0 14px 28px -4px rgba(0, 0, 0, 0.5), 0 10px 12px -5px rgba(0, 0, 0, 0.4)";
 			}}
@@ -72,7 +73,11 @@ export function FloatingStudioTrigger({ config }: FloatingStudioTriggerProps) {
 					"0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3)";
 			}}
 		>
-			<SwatchIcon width={22} height={22} style={{ color: "var(--primary)" }} />
+			<HugeiconsIcon
+				icon={PaintBoardIcon}
+				size={20}
+				className="text-primary transition-transform group-hover:rotate-12"
+			/>
 		</button>
 	);
 }

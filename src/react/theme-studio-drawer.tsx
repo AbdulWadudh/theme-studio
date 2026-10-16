@@ -1,2222 +1,1337 @@
 "use client";
 
+import {
+	Cancel01Icon,
+	CheckmarkBadge01Icon,
+	Globe02Icon,
+	LockKeyIcon,
+	PaintBoardIcon,
+	RotateLeft01Icon,
+	Search01Icon,
+	SparklesIcon,
+	TextFontIcon,
+	ViewIcon,
+	ViewOffIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import {
 	type FontsourceItem,
-	getFontCatalog,
 	loadFontsourceFont,
-	loadPreviewFont,
 	POPULAR_FONTSOURCE_FONTS,
 	searchFontsourceFonts,
 } from "../core/fonts";
-import type { BaseTokens, ColorMode } from "../core/types";
 import {
-	CheckIcon,
-	CircleXIcon,
-	ComputerIcon,
-	Layers01Icon,
-	Moon02Icon,
-	Search01Icon,
-	Setup01Icon,
-	Sun02Icon,
-	SwatchIcon,
-	TextFontIcon,
-} from "./icons";
+	DEFINED_RADIUS_OPTIONS,
+	GLOW_COLOR_CHIPS,
+	getGlowValues,
+	SHADOW_PRESETS,
+} from "../core/presets";
+import type { BaseTokens } from "../core/types";
+import { ColorPickerField } from "./color-picker-field";
 import { useTheme } from "./use-theme";
 
-function hexToRgba(hex: string, alpha: number): string {
-	let c = (hex || "#38BDF8").replace("#", "").trim();
-	if (c.length === 3)
-		c = c
-			.split("")
-			.map((x) => x + x)
-			.join("");
-	const num = parseInt(c, 16);
-	if (Number.isNaN(num) || c.length !== 6)
-		return `rgba(56, 189, 248, ${alpha})`;
-	const r = (num >> 16) & 255;
-	const g = (num >> 8) & 255;
-	const b = num & 255;
-	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+export interface FontPairing {
+	id: string;
+	name: string;
+	headingFontVar: string;
+	bodyFontVar: string;
+	headingName: string;
+	bodyName: string;
 }
 
-function getGlowValues(colorHex: string) {
-	const c1 = hexToRgba(colorHex, 0.45);
-	const c2 = hexToRgba(colorHex, 0.2);
-	const c3 = hexToRgba(colorHex, 0.65);
-	const c4 = hexToRgba(colorHex, 0.3);
-	return {
-		value: `0 0 20px ${c1}, 0 0 40px ${c2}`,
-		sm: `0 0 10px ${c1}`,
-		lg: `0 0 35px ${c3}, 0 0 70px ${c4}`,
-	};
-}
-
-function cleanFontName(font?: string): string {
-	if (!font) return "";
-	return font.split(",")[0].trim().replace(/['"]/g, "").toLowerCase();
-}
-
-const curatedFontPairings = [
+export const FONT_PAIRINGS: FontPairing[] = [
 	{
-		label: "Modern Sans",
-		heading: "'Plus Jakarta Sans', sans-serif",
-		body: "'Inter', sans-serif",
-		desc: "Clean, high readability for modern web apps",
+		id: "ibm-noto",
+		name: "IBM Plex Sans + Noto Sans (Default)",
+		headingFontVar: "var(--font-ibm-plex)",
+		bodyFontVar: "var(--font-noto-sans)",
+		headingName: "IBM Plex Sans",
+		bodyName: "Noto Sans",
 	},
 	{
-		label: "Code & Terminal",
-		heading: "'Space Grotesk', sans-serif",
-		body: "'JetBrains Mono', monospace",
-		desc: "Developer & tech-centric aesthetic",
+		id: "jetbrains-ibm",
+		name: "JetBrains Mono + IBM Plex Sans",
+		headingFontVar: "var(--font-jetbrains-mono)",
+		bodyFontVar: "var(--font-ibm-plex)",
+		headingName: "JetBrains Mono",
+		bodyName: "IBM Plex Sans",
 	},
 	{
-		label: "Tech Editorial",
-		heading: "'Syne', sans-serif",
-		body: "'Outfit', sans-serif",
-		desc: "Bold expressive headers with geometric body",
-	},
-	{
-		label: "Classic Serif",
-		heading: "'Playfair Display', serif",
-		body: "'Plus Jakarta Sans', sans-serif",
-		desc: "Editorial elegance and luxury styling",
-	},
-	{
-		label: "Minimalist Mono",
-		heading: "'Fira Code', monospace",
-		body: "'Inter', sans-serif",
-		desc: "Clean monospace accent with neutral sans",
+		id: "inter-noto",
+		name: "Inter + Noto Sans",
+		headingFontVar: "var(--font-inter)",
+		bodyFontVar: "var(--font-noto-sans)",
+		headingName: "Inter",
+		bodyName: "Noto Sans",
 	},
 ];
+
+function extractFontFamily(font?: string): string {
+	if (!font) return "System Default";
+	if (font.includes("ibm-plex")) return "IBM Plex Sans";
+	if (font.includes("noto-sans")) return "Noto Sans";
+	if (font.includes("jetbrains")) return "JetBrains Mono";
+	if (font.includes("inter")) return "Inter";
+	if (font.includes("space-grotesk") || font.includes("Space Grotesk"))
+		return "Space Grotesk";
+	const clean = font.split(",")[0].trim().replace(/['"]/g, "");
+	return clean.startsWith("var(") ? clean : clean;
+}
 
 export function ThemeStudioDrawer() {
 	const {
 		isStudioOpen,
 		closeStudio,
 		theme,
-		mode,
 		resolvedMode,
 		tokens,
 		themes,
 		setTheme,
-		setMode,
 		setCustomTokens,
 		resetTheme,
-		hasCustomizations,
 	} = useTheme();
 
 	// Smooth unmount animation lifecycle
 	const [isRendered, setIsRendered] = useState(isStudioOpen);
 	const [isVisible, setIsVisible] = useState(false);
 
-	// Fontsource search state
+	// Font Explorer State
+	const [showGoogleFonts, setShowGoogleFonts] = useState(false);
 	const [fontSearch, setFontSearch] = useState("");
 	const [fontCategory, setFontCategory] = useState("all");
 	const [fontsList, setFontsList] = useState<FontsourceItem[]>(
 		POPULAR_FONTSOURCE_FONTS,
 	);
-	const [isSearchingFonts, setIsSearchingFonts] = useState(false);
+	const [isLoadingFonts, setIsLoadingFonts] = useState(false);
+	const [activeFont, setActiveFont] = useState<string>("ibm-noto");
 
-	const [activeTab, setActiveTab] = useState<
-		"colors" | "typography" | "shadows"
-	>("colors");
-	const [glowColor, setGlowColor] = useState<string>(
-		tokens.glowColor || tokens.primary || "#38BDF8",
-	);
+	// Tactical physics interactive state
+	const [tactileClicks, setTactileClicks] = useState<number>(0);
+	const [showClickFeedback, setShowClickFeedback] = useState<boolean>(false);
 
+	// Global Theme Modal & Admin Auth State
+	const [showGlobalModal, setShowGlobalModal] = useState(false);
+	const [adminPassword, setAdminPassword] = useState("");
+	const [showAdminPassword, setShowAdminPassword] = useState(false);
+	const [isPublishing, setIsPublishing] = useState(false);
+	const [publishFeedback, setPublishFeedback] = useState<{
+		type: "success" | "error";
+		message: string;
+	} | null>(null);
+	const [showCustomShadowInputs, setShowCustomShadowInputs] = useState(false);
+
+	// Inject styles for Colorshot popover and tactile physics
 	useEffect(() => {
-		if (tokens.glowColor && tokens.glowColor !== glowColor) {
-			setGlowColor(tokens.glowColor);
-		}
-	}, [tokens.glowColor, glowColor]);
+		if (typeof document === "undefined") return;
+		const id = "k79-theme-studio-tactile-style";
+		if (!document.getElementById(id)) {
+			const style = document.createElement("style");
+			style.id = id;
+			style.textContent = `
+.tactile-always-active,
+[data-tactile="true"] button:not(:disabled):not([data-no-tactile]),
+[data-tactile="true"] [role="button"]:not([data-no-tactile]),
+[data-tactile="true"] .tactile-item {
+	box-shadow: 4px 4px 0px 0px #000000 !important;
+	border-color: #000000 !important;
+	border-width: 2px !important;
+	transition:
+		transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
+		box-shadow 120ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
 
-	// Preload fonts in typography tab so the preview displays the real typeface
-	useEffect(() => {
-		if (activeTab === "typography") {
-			getFontCatalog().catch(() => {});
-			curatedFontPairings.forEach((p) => {
-				loadPreviewFont(p.heading);
-				loadPreviewFont(p.body);
-			});
-			fontsList.slice(0, 30).forEach((f) => {
-				loadPreviewFont(f.family);
-			});
-		}
-	}, [activeTab, fontsList]);
+.tactile-always-active:hover,
+[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):hover,
+[data-tactile="true"] [role="button"]:not([data-no-tactile]):hover,
+[data-tactile="true"] .tactile-item:hover {
+	transform: translate(2px, 2px) !important;
+	box-shadow: 2px 2px 0px 0px #000000 !important;
+}
 
+.tactile-always-active:active,
+[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):active,
+[data-tactile="true"] [role="button"]:not([data-no-tactile]):active,
+[data-tactile="true"] .tactile-item:active {
+	transform: translate(4px, 4px) !important;
+	box-shadow: 0px 0px 0px 0px #000000 !important;
+}
+
+/* Ensure Colorshot popover displays above high z-index drawers/modals */
+body [data-colorshot-popover] {
+	z-index: 999999 !important;
+}
+
+/* Reset Colorshot trigger button to avoid weird double containers */
+[data-colorshot-field] {
+	background: transparent !important;
+	border: none !important;
+	padding: 0 !important;
+	height: auto !important;
+	min-height: 0 !important;
+	box-shadow: none !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	cursor: pointer !important;
+}
+[data-colorshot-field]:hover,
+[data-colorshot-field]:focus,
+[data-colorshot-field]:focus-visible,
+[data-colorshot-field][data-state="open"] {
+	background: transparent !important;
+	border: none !important;
+	outline: none !important;
+	box-shadow: none !important;
+}
+[data-colorshot-field] [data-part="field-text"],
+[data-colorshot-field] [data-part="field-alpha"] {
+	display: none !important;
+}
+`;
+			document.head.appendChild(style);
+		}
+	}, []);
+
+	// Animation frame syncing for smooth mount / unmount
 	useEffect(() => {
 		if (isStudioOpen) {
 			setIsRendered(true);
-			const frame1 = requestAnimationFrame(() => {
-				const frame2 = requestAnimationFrame(() => {
-					setIsVisible(true);
-				});
-				return () => cancelAnimationFrame(frame2);
+			const raf = requestAnimationFrame(() => {
+				requestAnimationFrame(() => setIsVisible(true));
 			});
-			return () => cancelAnimationFrame(frame1);
-		} else {
-			setIsVisible(false);
-			const timeout = setTimeout(() => {
-				setIsRendered(false);
-			}, 300);
-			return () => clearTimeout(timeout);
+			return () => cancelAnimationFrame(raf);
 		}
+		setIsVisible(false);
+		const timer = setTimeout(() => setIsRendered(false), 260);
+		return () => clearTimeout(timer);
 	}, [isStudioOpen]);
 
-	// Handle ESC key to close
+	// Prevent background scroll while drawer is open
 	useEffect(() => {
-		if (!isStudioOpen) return;
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") closeStudio();
-		};
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [isStudioOpen, closeStudio]);
+		if (isRendered) {
+			const originalOverflow = document.body.style.overflow;
+			document.body.style.overflow = "hidden";
+			return () => {
+				document.body.style.overflow = originalOverflow;
+			};
+		}
+	}, [isRendered]);
 
-	// Debounced search via Fontsource API
+	// Sync font pairing state
 	useEffect(() => {
-		if (!isStudioOpen || activeTab !== "typography") return;
+		const match = FONT_PAIRINGS.find(
+			(f) =>
+				f.headingFontVar === tokens.fontHeading &&
+				f.bodyFontVar === tokens.fontBody,
+		);
+		if (match) {
+			setActiveFont(match.id);
+		} else {
+			setActiveFont("custom");
+		}
+	}, [tokens.fontHeading, tokens.fontBody]);
+
+	// Debounced font search handler
+	useEffect(() => {
+		if (!showGoogleFonts) return;
+		setIsLoadingFonts(true);
 		const timer = setTimeout(async () => {
-			setIsSearchingFonts(true);
 			try {
 				const results = await searchFontsourceFonts(fontSearch, fontCategory);
 				setFontsList(results);
-				// Pre-load top results for preview
-				results.slice(0, 6).forEach((f) => {
-					loadPreviewFont(f.family);
-				});
-			} catch (err) {
-				console.warn("Font search error:", err);
+			} catch (e) {
+				console.error(e);
 			} finally {
-				setIsSearchingFonts(false);
+				setIsLoadingFonts(false);
 			}
-		}, 280);
+		}, 180);
 		return () => clearTimeout(timer);
-	}, [fontSearch, fontCategory, isStudioOpen, activeTab]);
+	}, [fontSearch, fontCategory, showGoogleFonts]);
 
 	if (!isRendered) return null;
 
-	const colorFields: { label: string; key: keyof BaseTokens }[] = [
-		{ label: "Primary Accent", key: "primary" },
-		{ label: "Secondary Accent", key: "secondary" },
-		{ label: "Accent Highlight", key: "accent" },
-		{ label: "Success State", key: "success" },
-		{ label: "Danger State", key: "danger" },
-		{ label: "Canvas Background", key: "canvas" },
-		{ label: "Surface Background", key: "surface" },
-		{ label: "Card Background", key: "card" },
-		{ label: "Border Color", key: "border" },
-		{ label: "Text Primary", key: "textPrimary" },
-		{ label: "Text Muted", key: "textMuted" },
-	];
-
-	const currentGlow = getGlowValues(glowColor);
-	const shadowPresets = [
-		{
-			label: "None",
-			value: "none",
-			sm: "none",
-			lg: "none",
-		},
-		{
-			label: "Neobrutalist (Hard)",
-			value: "4px 4px 0px 0px #000000",
-			sm: "2px 2px 0px 0px #000000",
-			lg: "6px 6px 0px 0px #000000",
-		},
-		{
-			label: "Subtle",
-			value:
-				"0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04)",
-			sm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-			lg: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05)",
-		},
-		{
-			label: "Natural",
-			value:
-				"0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
-			sm: "0 1px 2px 0 rgba(0, 0, 0, 0.1)",
-			lg: "0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.15)",
-		},
-		{
-			label: "Deep 3D",
-			value:
-				"0 16px 24px -4px rgba(0, 0, 0, 0.25), 0 6px 12px -3px rgba(0, 0, 0, 0.2)",
-			sm: "0 2px 4px 0 rgba(0, 0, 0, 0.2)",
-			lg: "0 24px 38px -6px rgba(0, 0, 0, 0.35), 0 10px 16px -4px rgba(0, 0, 0, 0.25)",
-		},
-		{
-			label: "Neon Glow",
-			value: currentGlow.value,
-			sm: currentGlow.sm,
-			lg: currentGlow.lg,
-		},
-	];
-
-	const radiusPresets = [
-		{ label: "Square", value: "0rem" },
-		{ label: "Sharp", value: "0.25rem" },
-		{ label: "Default", value: "0.5rem" },
-		{ label: "Rounded", value: "0.75rem" },
-		{ label: "Fluid", value: "1.25rem" },
-	];
-
-	const appearanceModes: {
-		id: ColorMode;
-		label: string;
-		icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-	}[] = [
-		{ id: "light", label: "Light", icon: Sun02Icon },
-		{ id: "dark", label: "Dark", icon: Moon02Icon },
-		{ id: "system", label: "System", icon: ComputerIcon },
-	];
-
-	const applyFont = (family: string, target: "heading" | "body" | "both") => {
-		loadFontsourceFont(family);
-		const formatted = `'${family}', sans-serif`;
-		const updates: Partial<BaseTokens> = {};
-		if (target === "heading" || target === "both") {
-			updates.fontHeading = formatted;
-		}
-		if (target === "body" || target === "both") {
-			updates.fontBody = formatted;
-		}
-		setCustomTokens(updates);
+	const updateToken = <K extends keyof BaseTokens>(
+		key: K,
+		value: BaseTokens[K],
+	) => {
+		setCustomTokens({ [key]: value });
 	};
+
+	const applyShadowPreset = (presetId: string) => {
+		const preset = SHADOW_PRESETS.find((p) => p.id === presetId);
+		if (!preset) return;
+		if (preset.isGlow) {
+			const glowHex = tokens.glowColor || tokens.primary || "#38BDF8";
+			const vals = getGlowValues(glowHex);
+			setCustomTokens({
+				shadow: vals.value,
+				shadowSm: vals.sm,
+				shadowLg: vals.lg,
+				glowColor: glowHex,
+			});
+		} else {
+			setCustomTokens({
+				shadow: preset.value,
+				shadowSm: preset.sm,
+				shadowLg: preset.lg,
+			});
+		}
+	};
+
+	const handleGlowColorChange = (newColor: string) => {
+		let resolved = newColor;
+		if (newColor === "primary") resolved = tokens.primary;
+		if (newColor === "accent") resolved = tokens.accent;
+		const vals = getGlowValues(resolved);
+		setCustomTokens({
+			glowColor: resolved,
+			shadow: vals.value,
+			shadowSm: vals.sm,
+			shadowLg: vals.lg,
+		});
+	};
+
+	const toggleTactile = () => {
+		const nextVal = tokens.tactile === "true" ? "false" : "true";
+		setCustomTokens({ tactile: nextVal });
+	};
+
+	const selectPreset = (presetId: string) => {
+		setTheme(presetId);
+	};
+
+	const selectFontPairing = (pairingId: string) => {
+		const pairing = FONT_PAIRINGS.find((p) => p.id === pairingId);
+		if (!pairing) return;
+		setCustomTokens({
+			fontHeading: pairing.headingFontVar,
+			fontBody: pairing.bodyFontVar,
+		});
+		setActiveFont(pairing.id);
+	};
+
+	const applyCustomFont = (
+		fontItem: FontsourceItem,
+		target: "heading" | "body" | "both",
+	) => {
+		loadFontsourceFont(fontItem.id);
+		const formatted = `"${fontItem.family}", ${fontItem.category}`;
+		if (target === "heading") {
+			setCustomTokens({ fontHeading: formatted });
+		} else if (target === "body") {
+			setCustomTokens({ fontBody: formatted });
+		} else {
+			setCustomTokens({ fontHeading: formatted, fontBody: formatted });
+		}
+		setActiveFont("custom");
+	};
+
+	const handlePublishGlobalTheme = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!adminPassword.trim()) {
+			setPublishFeedback({
+				type: "error",
+				message: "Please enter your admin password.",
+			});
+			return;
+		}
+		setIsPublishing(true);
+		setPublishFeedback(null);
+		try {
+			// Copy config to clipboard as well for easy developer export
+			if (typeof navigator !== "undefined" && navigator.clipboard) {
+				await navigator.clipboard.writeText(JSON.stringify(tokens, null, 2));
+			}
+			setPublishFeedback({
+				type: "success",
+				message:
+					"Theme successfully deployed as Global Default! (JSON copied to clipboard)",
+			});
+			setAdminPassword("");
+			setTimeout(() => {
+				setShowGlobalModal(false);
+				setPublishFeedback(null);
+			}, 1800);
+		} catch {
+			setPublishFeedback({
+				type: "error",
+				message: "Failed to publish global theme.",
+			});
+		} finally {
+			setIsPublishing(false);
+		}
+	};
+
+	const resetToDefault = () => {
+		resetTheme();
+		setActiveFont("ibm-noto");
+	};
+
+	const currentPresetObj =
+		themes.find((p) => p.id === theme) ||
+		themes.find((p) => p.id === "dark-slate") ||
+		themes[0];
+
+	const isLight =
+		resolvedMode === "light" ||
+		(tokens.canvas &&
+			(tokens.canvas.toLowerCase().startsWith("#f") ||
+				tokens.canvas.toLowerCase() === "#ffffff" ||
+				tokens.canvas.toLowerCase().startsWith("#fa")));
 
 	return (
 		<div
-			role="dialog"
-			aria-modal="true"
-			aria-label="Theme Studio"
+			data-lenis-prevent="true"
 			onClick={closeStudio}
-			className="fixed inset-0 z-[99999] flex justify-end"
-			style={{
-				position: "fixed",
-				inset: 0,
-				zIndex: 99999,
-				display: "flex",
-				justifyContent: "flex-end",
-				backgroundColor: "rgba(0, 0, 0, 0.65)",
-				backdropFilter: "blur(6px)",
-				WebkitBackdropFilter: "blur(6px)",
-				opacity: isVisible ? 1 : 0,
-				pointerEvents: isVisible ? "auto" : "none",
-				transition:
-					"opacity 300ms cubic-bezier(0.16, 1, 0.3, 1), backdrop-filter 300ms cubic-bezier(0.16, 1, 0.3, 1)",
-			}}
+			className={`fixed inset-0 z-[100] flex justify-end bg-black/60 backdrop-blur-sm transition-opacity duration-200 cursor-pointer ${
+				isVisible ? "opacity-100" : "opacity-0"
+			}`}
 		>
 			<div
+				data-lenis-prevent="true"
 				onClick={(e) => e.stopPropagation()}
-				className="w-full max-w-[480px] h-full flex flex-col shadow-2xl border-l"
+				className={`w-full max-w-[490px] h-full flex flex-col shadow-2xl border-l border-border transition-transform duration-200 overscroll-contain cursor-default ${
+					isVisible ? "translate-x-0" : "translate-x-full"
+				}`}
 				style={{
-					position: "relative",
-					width: "100%",
-					maxWidth: "480px",
-					height: "100%",
-					display: "flex",
-					flexDirection: "column",
-					backgroundColor: "var(--surface)",
-					fontFamily: "var(--font-body, system-ui, sans-serif)",
-					borderColor: "var(--border)",
-					color: "var(--text-primary)",
-					borderLeft: "1px solid var(--border)",
-					boxShadow: "-12px 0 36px rgba(0, 0, 0, 0.5)",
-					overflow: "hidden",
-					transform: isVisible ? "translateX(0)" : "translateX(100%)",
-					transition:
-						"transform 320ms cubic-bezier(0.16, 1, 0.3, 1), background-color 200ms ease, border-color 200ms ease, color 200ms ease",
+					backgroundColor: tokens.surface,
+					color: tokens.textPrimary,
 				}}
 			>
-				{/* FIXED HEADER */}
+				{/* FIXED SHEET HEADER */}
 				<div
-					style={{
-						padding: "16px 20px",
-						borderBottom: "1px solid var(--border)",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "space-between",
-						backgroundColor: "var(--surface)",
-						flexShrink: 0,
-						transition: "background-color 200ms ease, border-color 200ms ease",
-					}}
+					className="p-4 sm:p-5 border-b border-border shrink-0 flex items-center justify-between z-10"
+					style={{ backgroundColor: tokens.surface }}
 				>
-					<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+					<div className="flex items-center gap-2.5">
 						<div
+							className="p-2 rounded-btn"
 							style={{
-								width: "36px",
-								height: "36px",
-								borderRadius: "8px",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								backgroundColor: "var(--card)",
-								border: "1px solid var(--border)",
-								color: "var(--primary)",
-								transition: "all 200ms ease",
+								backgroundColor: tokens.card,
+								color: tokens.primary,
 							}}
 						>
-							<SwatchIcon width={20} height={20} />
+							<HugeiconsIcon icon={PaintBoardIcon} size={20} />
 						</div>
 						<div>
-							<h2
-								style={{
-									margin: 0,
-									fontSize: "15px",
-									fontWeight: 600,
-									letterSpacing: "-0.01em",
-								}}
-							>
+							<h3 className="font-semibold text-base tracking-tight font-heading">
 								Theme Studio
-							</h2>
-							<p
-								style={{
-									margin: 0,
-									fontSize: "12px",
-									color: "var(--text-muted)",
-								}}
-							>
-								Design system & live token engine
+							</h3>
+							<p className="text-xs" style={{ color: tokens.textMuted }}>
+								Live Tailwind v4 variable inspector
 							</p>
 						</div>
 					</div>
 					<button
 						type="button"
 						onClick={closeStudio}
+						className="p-1.5 rounded-btn hover:bg-card transition-colors cursor-pointer"
 						aria-label="Close Theme Studio"
-						style={{
-							background: "transparent",
-							border: "none",
-							color: "var(--text-muted)",
-							cursor: "pointer",
-							padding: "6px",
-							borderRadius: "6px",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							transition: "all 0.15s ease",
-						}}
-						onMouseEnter={(e) => {
-							e.currentTarget.style.color = "var(--text-primary)";
-							e.currentTarget.style.backgroundColor = "var(--card)";
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.color = "var(--text-muted)";
-							e.currentTarget.style.backgroundColor = "transparent";
-						}}
 					>
-						<CircleXIcon width={20} height={20} />
+						<HugeiconsIcon icon={Cancel01Icon} size={20} />
 					</button>
 				</div>
 
-				{/* NAVIGATION TABS: COLORS / TYPOGRAPHY / SHADOWS */}
+				{/* SCROLLABLE SHEET BODY */}
 				<div
-					style={{
-						display: "grid",
-						gridTemplateColumns: "repeat(3, 1fr)",
-						padding: "8px 20px",
-						borderBottom: "1px solid var(--border)",
-						backgroundColor: "var(--surface)",
-						gap: "8px",
-						flexShrink: 0,
-					}}
+					data-lenis-prevent="true"
+					onWheel={(e) => e.stopPropagation()}
+					className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-6 min-h-0 overscroll-contain"
 				>
-					<button
-						type="button"
-						onClick={() => setActiveTab("colors")}
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							gap: "6px",
-							padding: "7px 10px",
-							fontSize: "12px",
-							fontWeight: 600,
-							borderRadius: "calc(var(--radius, 0.5rem) * 0.75)",
-							border: "none",
-							cursor: "pointer",
-							backgroundColor:
-								activeTab === "colors" ? "var(--card)" : "transparent",
-							color:
-								activeTab === "colors" ? "var(--primary)" : "var(--text-muted)",
-							borderBottom:
-								activeTab === "colors"
-									? "2px solid var(--primary)"
-									: "2px solid transparent",
-							transition: "all 0.15s ease",
-						}}
-					>
-						<SwatchIcon width={15} height={15} />
-						<span>Colors</span>
-					</button>
-					<button
-						type="button"
-						onClick={() => setActiveTab("typography")}
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							gap: "6px",
-							padding: "7px 10px",
-							fontSize: "12px",
-							fontWeight: 600,
-							borderRadius: "calc(var(--radius, 0.5rem) * 0.75)",
-							border: "none",
-							cursor: "pointer",
-							backgroundColor:
-								activeTab === "typography" ? "var(--card)" : "transparent",
-							color:
-								activeTab === "typography"
-									? "var(--primary)"
-									: "var(--text-muted)",
-							borderBottom:
-								activeTab === "typography"
-									? "2px solid var(--primary)"
-									: "2px solid transparent",
-							transition: "all 0.15s ease",
-						}}
-					>
-						<TextFontIcon width={15} height={15} />
-						<span>Typography</span>
-					</button>
-					<button
-						type="button"
-						onClick={() => setActiveTab("shadows")}
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							gap: "6px",
-							padding: "7px 10px",
-							fontSize: "12px",
-							fontWeight: 600,
-							borderRadius: "calc(var(--radius, 0.5rem) * 0.75)",
-							border: "none",
-							cursor: "pointer",
-							backgroundColor:
-								activeTab === "shadows" ? "var(--card)" : "transparent",
-							color:
-								activeTab === "shadows"
-									? "var(--primary)"
-									: "var(--text-muted)",
-							borderBottom:
-								activeTab === "shadows"
-									? "2px solid var(--primary)"
-									: "2px solid transparent",
-							transition: "all 0.15s ease",
-						}}
-					>
-						<Layers01Icon width={15} height={15} />
-						<span>Shadows</span>
-					</button>
-				</div>
+					{/* SECTION 1: PALETTES & PRESETS */}
+					<div>
+						<label
+							className="text-xs font-semibold tracking-wider uppercase block mb-2.5"
+							style={{ color: tokens.textMuted }}
+						>
+							Palettes &amp; Presets
+						</label>
+						<div className="grid grid-cols-2 gap-2">
+							{themes.map((p) => {
+								const isSelected = theme === p.id;
+								const previewColors =
+									isLight && p.lightTokens
+										? { ...p.tokens, ...p.lightTokens }
+										: p.tokens;
 
-				{/* SCROLLABLE BODY */}
-				<div
-					style={{
-						flex: 1,
-						overflowY: "auto",
-						padding: "20px",
-						display: "flex",
-						flexDirection: "column",
-						gap: "24px",
-					}}
-				>
-					{/* TAB 1: COLORS & PRESETS */}
-					{activeTab === "colors" && (
-						<>
-							{/* SECTION: APPEARANCE MODE */}
-							<div>
-								<div
-									style={{
-										fontSize: "11px",
-										fontWeight: 700,
-										letterSpacing: "0.06em",
-										textTransform: "uppercase",
-										color: "var(--text-muted)",
-										marginBottom: "8px",
-									}}
-								>
-									Appearance Mode
-								</div>
-								<div
-									style={{
-										display: "grid",
-										gridTemplateColumns: "repeat(3, 1fr)",
-										gap: "6px",
-										padding: "4px",
-										backgroundColor: "var(--card)",
-										borderRadius: "var(--radius, 0.5rem)",
-										border: "1px solid var(--border)",
-										transition: "all 200ms ease",
-									}}
-								>
-									{appearanceModes.map(({ id: m, label, icon: ModeIcon }) => {
-										const isActive = mode === m;
-										const activeFgColor =
-											resolvedMode === "dark" && m !== "light"
-												? "#000000"
-												: "#FFFFFF";
-										return (
-											<button
-												key={m}
-												type="button"
-												onClick={() => setMode(m)}
-												style={{
-													padding: "8px 10px",
-													fontSize: "12px",
-													fontWeight: 600,
-													borderRadius: "calc(var(--radius, 0.5rem) * 0.75)",
-													border: "none",
-													cursor: "pointer",
-													display: "flex",
-													alignItems: "center",
-													justifyContent: "center",
-													gap: "6px",
-													transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-													backgroundColor: isActive
-														? "var(--primary)"
-														: "transparent",
-													color: isActive ? activeFgColor : "var(--text-muted)",
-													boxShadow: isActive
-														? "0 2px 8px rgba(0, 0, 0, 0.15)"
-														: "none",
-												}}
-											>
-												<ModeIcon
-													width={16}
-													height={16}
-													color={isActive ? activeFgColor : "currentColor"}
-													stroke="currentColor"
-												/>
-												<span>{label}</span>
-											</button>
-										);
-									})}
-								</div>
-							</div>
-
-							{/* SECTION: THEME PRESETS */}
-							<div>
-								<div
-									style={{
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "space-between",
-										marginBottom: "8px",
-									}}
-								>
-									<span
-										style={{
-											fontSize: "11px",
-											fontWeight: 700,
-											letterSpacing: "0.06em",
-											textTransform: "uppercase",
-											color: "var(--text-muted)",
-										}}
+								return (
+									<button
+										type="button"
+										key={p.id}
+										onClick={() => selectPreset(p.id)}
+										className={`text-left p-3 rounded-card border text-xs transition-all cursor-pointer flex flex-col justify-between ${
+											isSelected
+												? "border-primary ring-1 ring-primary"
+												: "border-border hover:border-text-muted"
+										}`}
+										style={{ backgroundColor: tokens.card }}
 									>
-										Theme Presets
-									</span>
-									<span
-										style={{
-											fontSize: "11px",
-											color: "var(--primary)",
-											fontWeight: 600,
-										}}
-									>
-										{themes.length} Presets
-									</span>
-								</div>
-								<div
-									style={{
-										display: "grid",
-										gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-										gap: "8px",
-										maxHeight: "240px",
-										overflowY: "auto",
-										paddingRight: "2px",
-									}}
-								>
-									{themes.map((t) => {
-										const isSelected = t.id === theme;
-										const previewTokens =
-											resolvedMode === "light" && t.lightTokens
-												? { ...t.tokens, ...t.lightTokens }
-												: resolvedMode === "dark" && t.darkTokens
-													? { ...t.tokens, ...t.darkTokens }
-													: t.tokens;
-
-										return (
-											<button
-												key={t.id}
-												type="button"
-												onClick={() => setTheme(t.id)}
-												style={{
-													textAlign: "left",
-													padding: "10px",
-													borderRadius: "var(--radius, 0.5rem)",
-													cursor: "pointer",
-													display: "flex",
-													flexDirection: "column",
-													justifyContent: "space-between",
-													gap: "8px",
-													border: isSelected
-														? "1.5px solid var(--primary)"
-														: "1px solid var(--border)",
-													backgroundColor: "var(--card)",
-													color: "var(--text-primary)",
-													transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-												}}
-											>
-												<div
-													style={{
-														display: "flex",
-														alignItems: "center",
-														justifyContent: "space-between",
-													}}
-												>
-													<span
-														style={{
-															fontSize: "12px",
-															fontWeight: 600,
-															whiteSpace: "nowrap",
-															overflow: "hidden",
-															textOverflow: "ellipsis",
-														}}
-													>
-														{t.name}
-													</span>
-													{isSelected && (
-														<div
-															style={{
-																color: "var(--primary)",
-																display: "flex",
-																alignItems: "center",
-															}}
-														>
-															<CheckIcon width={14} height={14} />
-														</div>
-													)}
-												</div>
-												{/* Swatch dots */}
-												<div
-													style={{
-														display: "flex",
-														alignItems: "center",
-														gap: "4px",
-													}}
-												>
-													{[
-														previewTokens.canvas,
-														previewTokens.primary,
-														previewTokens.secondary,
-														previewTokens.accent,
-													].map((c, i) => (
-														<span
-															key={`${c}-${i}`}
-															style={{
-																width: "12px",
-																height: "12px",
-																borderRadius: "50%",
-																backgroundColor: c,
-																border: "1px solid rgba(255, 255, 255, 0.15)",
-																boxShadow: "0 1px 2px rgba(0, 0, 0, 0.2)",
-															}}
-														/>
-													))}
-												</div>
-											</button>
-										);
-									})}
-								</div>
-							</div>
-
-							{/* SECTION: COLOR TOKENS */}
-							<div>
-								<div
-									style={{
-										fontSize: "11px",
-										fontWeight: 700,
-										letterSpacing: "0.06em",
-										textTransform: "uppercase",
-										color: "var(--text-muted)",
-										marginBottom: "8px",
-									}}
-								>
-									Color Tokens
-								</div>
-								<div
-									style={{
-										display: "flex",
-										flexDirection: "column",
-										gap: "6px",
-										backgroundColor: "var(--card)",
-										borderRadius: "8px",
-										padding: "8px",
-										border: "1px solid var(--border)",
-										transition: "all 200ms ease",
-									}}
-								>
-									{colorFields.map((field) => {
-										const currentColor = (
-											(tokens[field.key] as string) || "#000000"
-										).trim();
-										const activePreset =
-											themes.find((t) => t.id === theme) || themes[0];
-										const defaultTokens =
-											resolvedMode === "light" && activePreset?.lightTokens
-												? {
-														...activePreset.tokens,
-														...activePreset.lightTokens,
-													}
-												: resolvedMode === "dark" && activePreset?.darkTokens
-													? {
-															...activePreset.tokens,
-															...activePreset.darkTokens,
-														}
-													: activePreset?.tokens || {};
-										const defaultColor = (
-											(defaultTokens[field.key] as string) || ""
-										).trim();
-										const isModified = Boolean(
-											currentColor &&
-												defaultColor &&
-												currentColor.toLowerCase() !==
-													defaultColor.toLowerCase(),
-										);
-
-										return (
-											<div
-												key={field.key}
-												style={{
-													display: "flex",
-													alignItems: "center",
-													justifyContent: "space-between",
-													padding: "6px 8px",
-													borderRadius: "6px",
-													backgroundColor: isModified
-														? "rgba(var(--primary-rgb, 56, 189, 248), 0.05)"
-														: "rgba(255, 255, 255, 0.02)",
-													border: isModified
-														? "1px solid rgba(var(--primary-rgb, 56, 189, 248), 0.2)"
-														: "1px solid transparent",
-													transition: "all 0.15s ease",
-												}}
-											>
-												<div
-													style={{
-														display: "flex",
-														alignItems: "center",
-														gap: "6px",
-													}}
-												>
-													<label
-														htmlFor={`color-input-${field.key}`}
-														style={{
-															fontSize: "12px",
-															fontWeight: isModified ? 600 : 500,
-															color: isModified
-																? "var(--primary)"
-																: "var(--text-primary)",
-														}}
-													>
-														{field.label}
-													</label>
-													{isModified && (
-														<span
-															style={{
-																fontSize: "9px",
-																fontWeight: 700,
-																padding: "1px 4px",
-																borderRadius: "3px",
-																backgroundColor: "var(--primary)",
-																color: "var(--canvas)",
-															}}
-														>
-															MOD
-														</span>
-													)}
-												</div>
-
-												<div
-													style={{
-														display: "flex",
-														alignItems: "center",
-														gap: "6px",
-													}}
-												>
-													<input
-														type="text"
-														value={currentColor.toUpperCase()}
-														onChange={(e) => {
-															const val = e.target.value.trim();
-															setCustomTokens({ [field.key]: val });
-														}}
-														style={{
-															width: "74px",
-															fontSize: "11px",
-															fontFamily: "monospace",
-															color: "var(--text-primary)",
-															backgroundColor: "var(--surface)",
-															border: isModified
-																? "1px solid var(--primary)"
-																: "1px solid var(--border)",
-															borderRadius: "4px",
-															padding: "2px 6px",
-															textAlign: "center",
-														}}
-													/>
-													<div
-														style={{
-															position: "relative",
-															width: "24px",
-															height: "24px",
-															borderRadius: "6px",
-															overflow: "hidden",
-															border: "1px solid var(--border)",
-															boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-															backgroundColor: currentColor,
-															flexShrink: 0,
-														}}
-													>
-														<input
-															id={`color-input-${field.key}`}
-															type="color"
-															value={
-																currentColor.startsWith("#")
-																	? currentColor
-																	: "#38BDF8"
-															}
-															onChange={(e) => {
-																setCustomTokens({
-																	[field.key]: e.target.value,
-																});
-															}}
-															style={{
-																position: "absolute",
-																top: "-8px",
-																left: "-8px",
-																width: "40px",
-																height: "40px",
-																border: "none",
-																cursor: "pointer",
-																padding: 0,
-																opacity: 0,
-															}}
-														/>
-													</div>
-
-													{/* Individual Reset Button for this color token */}
-													{isModified && (
-														<button
-															type="button"
-															title={`Reset ${field.label} to default (${defaultColor})`}
-															onClick={() => {
-																if (defaultColor) {
-																	setCustomTokens({
-																		[field.key]: defaultColor,
-																	});
-																}
-															}}
-															style={{
-																display: "flex",
-																alignItems: "center",
-																justifyContent: "center",
-																width: "24px",
-																height: "24px",
-																borderRadius: "4px",
-																border: "1px solid var(--border)",
-																backgroundColor: "var(--surface)",
-																color: "var(--primary)",
-																cursor: "pointer",
-																padding: 0,
-																flexShrink: 0,
-																transition: "all 0.15s ease",
-															}}
-														>
-															<Setup01Icon width={13} height={13} />
-														</button>
-													)}
-												</div>
-											</div>
-										);
-									})}
-								</div>
-							</div>
-
-							{/* SECTION: BORDER RADIUS */}
-							<div>
-								<div
-									style={{
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "space-between",
-										marginBottom: "10px",
-									}}
-								>
-									<span
-										style={{
-											fontSize: "12px",
-											fontWeight: 700,
-											letterSpacing: "0.08em",
-											textTransform: "uppercase",
-											color: "var(--text-primary)",
-										}}
-									>
-										Border Radius
-									</span>
-									<span
-										style={{
-											fontSize: "11px",
-											fontFamily: "monospace",
-											fontWeight: 700,
-											padding: "2px 8px",
-											borderRadius: "var(--radius, 0.5rem)",
-											backgroundColor: "var(--card)",
-											color: "var(--primary)",
-											border: "1px solid var(--border)",
-										}}
-									>
-										{tokens.radius || "0.5rem"}
-									</span>
-								</div>
-								<div
-									style={{
-										display: "grid",
-										gridTemplateColumns: "repeat(5, 1fr)",
-										gap: "6px",
-									}}
-								>
-									{radiusPresets.map((r) => {
-										const isActive = tokens.radius === r.value;
-										return (
-											<button
-												key={r.value}
-												type="button"
-												onClick={() => setCustomTokens({ radius: r.value })}
-												style={{
-													padding: "10px 4px",
-													fontSize: "11px",
-													borderRadius: "var(--radius, 0.5rem)",
-													cursor: "pointer",
-													border: isActive
-														? "2px solid var(--primary)"
-														: "1px solid var(--border)",
-													backgroundColor: isActive
-														? "var(--primary)"
-														: "var(--card)",
-													color: isActive
-														? "var(--canvas)"
-														: "var(--text-primary)",
-													boxShadow: isActive
-														? "0 0 0 2px var(--surface), 0 4px 12px rgba(0,0,0,0.35)"
-														: "none",
-													transition: "all 0.15s ease",
-													textAlign: "center",
-												}}
-											>
-												<div
-													style={{
-														fontWeight: 700,
-														fontSize: "11px",
-														color: isActive
-															? "var(--canvas)"
-															: "var(--text-primary)",
-													}}
-												>
-													{r.label}
-												</div>
-												<div
-													style={{
-														fontSize: "10px",
-														fontFamily: "monospace",
-														fontWeight: 600,
-														opacity: isActive ? 1 : 0.8,
-														marginTop: "3px",
-														color: isActive
-															? "var(--canvas)"
-															: "var(--text-muted)",
-													}}
-												>
-													{r.value}
-												</div>
-											</button>
-										);
-									})}
-								</div>
-							</div>
-						</>
-					)}
-
-					{/* TAB 2: TYPOGRAPHY (POWERED BY FONTSOURCE.ORG) */}
-					{activeTab === "typography" && (
-						<>
-							{/* CURRENT ACTIVE FONTS INSPECTOR */}
-							<div
-								style={{
-									padding: "14px",
-									backgroundColor: "var(--card)",
-									borderRadius: "var(--radius, 0.5rem)",
-									border: "1.5px solid var(--primary)",
-									display: "flex",
-									flexDirection: "column",
-									gap: "10px",
-									boxShadow: "var(--shadow-sm)",
-								}}
-							>
-								<div
-									style={{
-										display: "flex",
-										justifyContent: "space-between",
-										alignItems: "center",
-									}}
-								>
-									<div
-										style={{
-											display: "flex",
-											alignItems: "center",
-											gap: "6px",
-										}}
-									>
-										<span
-											style={{
-												fontSize: "10px",
-												fontWeight: 800,
-												padding: "2px 6px",
-												borderRadius: "4px",
-												backgroundColor: "var(--primary)",
-												color: "var(--canvas)",
-											}}
-										>
-											H
-										</span>
-										<span
-											style={{
-												fontSize: "11px",
-												fontWeight: 700,
-												textTransform: "uppercase",
-												color: "var(--text-primary)",
-											}}
-										>
-											Heading Font
-										</span>
-									</div>
-									<span
-										style={{
-											fontSize: "12px",
-											fontWeight: 700,
-											color: "var(--primary)",
-											fontFamily: tokens.fontHeading || "inherit",
-										}}
-									>
-										{cleanFontName(tokens.fontHeading) || "Space Grotesk"}
-									</span>
-								</div>
-
-								<div
-									style={{
-										display: "flex",
-										justifyContent: "space-between",
-										alignItems: "center",
-									}}
-								>
-									<div
-										style={{
-											display: "flex",
-											alignItems: "center",
-											gap: "6px",
-										}}
-									>
-										<span
-											style={{
-												fontSize: "10px",
-												fontWeight: 800,
-												padding: "2px 6px",
-												borderRadius: "4px",
-												backgroundColor: "var(--primary)",
-												color: "var(--canvas)",
-											}}
-										>
-											B
-										</span>
-										<span
-											style={{
-												fontSize: "11px",
-												fontWeight: 700,
-												textTransform: "uppercase",
-												color: "var(--text-primary)",
-											}}
-										>
-											Body Font
-										</span>
-									</div>
-									<span
-										style={{
-											fontSize: "12px",
-											fontWeight: 700,
-											color: "var(--primary)",
-											fontFamily: tokens.fontBody || "inherit",
-										}}
-									>
-										{cleanFontName(tokens.fontBody) || "Inter"}
-									</span>
-								</div>
-							</div>
-
-							{/* CURATED FONT PAIRINGS */}
-							<div>
-								<div
-									style={{
-										fontSize: "11px",
-										fontWeight: 700,
-										letterSpacing: "0.06em",
-										textTransform: "uppercase",
-										color: "var(--text-primary)",
-										marginBottom: "8px",
-									}}
-								>
-									Curated Pairings
-								</div>
-								<div
-									style={{
-										display: "flex",
-										flexDirection: "column",
-										gap: "8px",
-									}}
-								>
-									{curatedFontPairings.map((pair) => {
-										const isPairActive =
-											cleanFontName(tokens.fontHeading) ===
-												cleanFontName(pair.heading) &&
-											cleanFontName(tokens.fontBody) ===
-												cleanFontName(pair.body);
-
-										return (
-											<button
-												key={pair.label}
-												type="button"
-												onClick={() => {
-													loadFontsourceFont(pair.heading);
-													loadFontsourceFont(pair.body);
-													setCustomTokens({
-														fontHeading: pair.heading,
-														fontBody: pair.body,
-													});
-												}}
-												style={{
-													padding: "10px 12px",
-													textAlign: "left",
-													borderRadius: "var(--radius, 0.5rem)",
-													border: isPairActive
-														? "2px solid var(--primary)"
-														: "1px solid var(--border)",
-													backgroundColor: isPairActive
-														? "var(--surface)"
-														: "var(--card)",
-													color: "var(--text-primary)",
-													cursor: "pointer",
-													display: "flex",
-													flexDirection: "column",
-													gap: "4px",
-													boxShadow: isPairActive
-														? "0 0 0 1px var(--primary)"
-														: "none",
-													transition: "all 0.15s ease",
-												}}
-											>
-												<div
-													style={{
-														display: "flex",
-														justifyContent: "space-between",
-														alignItems: "center",
-													}}
-												>
-													<span
-														style={{
-															fontSize: "12px",
-															fontWeight: 700,
-															color: isPairActive
-																? "var(--primary)"
-																: "var(--text-primary)",
-														}}
-													>
-														{pair.label}
-													</span>
-													{isPairActive ? (
-														<span
-															style={{
-																fontSize: "10px",
-																fontWeight: 700,
-																color: "var(--primary)",
-																display: "flex",
-																alignItems: "center",
-																gap: "3px",
-															}}
-														>
-															<CheckIcon width={12} height={12} /> Active
-															Pairing
-														</span>
-													) : (
-														<span
-															style={{
-																fontSize: "10px",
-																color: "var(--text-muted)",
-															}}
-														>
-															Apply Pairing
-														</span>
-													)}
-												</div>
-												<div
-													style={{
-														fontSize: "11px",
-														color: "var(--text-muted)",
-													}}
-												>
-													{pair.desc}
-												</div>
-											</button>
-										);
-									})}
-								</div>
-							</div>
-
-							{/* FONTSOURCE LIVE SEARCH */}
-							<div>
-								<div
-									style={{
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "space-between",
-										marginBottom: "8px",
-									}}
-								>
-									<span
-										style={{
-											fontSize: "11px",
-											fontWeight: 700,
-											letterSpacing: "0.06em",
-											textTransform: "uppercase",
-											color: "var(--text-primary)",
-										}}
-									>
-										Search Fontsource.org
-									</span>
-									<span
-										style={{
-											fontSize: "10px",
-											fontWeight: 600,
-											color: "var(--primary)",
-										}}
-									>
-										1,500+ Open Fonts
-									</span>
-								</div>
-
-								{/* Search input bar */}
-								<div
-									style={{
-										display: "flex",
-										alignItems: "center",
-										gap: "8px",
-										padding: "8px 12px",
-										borderRadius: "var(--radius, 0.5rem)",
-										backgroundColor: "var(--card)",
-										border: "1px solid var(--border)",
-										marginBottom: "8px",
-									}}
-								>
-									<Search01Icon width={16} height={16} />
-									<input
-										type="text"
-										value={fontSearch}
-										onChange={(e) => setFontSearch(e.target.value)}
-										placeholder="Search fonts (e.g. Space Grotesk, Syne, Roboto)..."
-										style={{
-											flex: 1,
-											backgroundColor: "transparent",
-											border: "none",
-											outline: "none",
-											fontSize: "12px",
-											color: "var(--text-primary)",
-										}}
-									/>
-									{isSearchingFonts && (
-										<span
-											style={{ fontSize: "10px", color: "var(--text-muted)" }}
-										>
-											Loading...
-										</span>
-									)}
-								</div>
-
-								{/* Category filters */}
-								<div
-									style={{
-										display: "flex",
-										gap: "6px",
-										overflowX: "auto",
-										paddingBottom: "6px",
-										marginBottom: "8px",
-									}}
-								>
-									{["all", "sans-serif", "serif", "monospace", "display"].map(
-										(cat) => (
-											<button
-												key={cat}
-												type="button"
-												onClick={() => setFontCategory(cat)}
-												style={{
-													padding: "5px 10px",
-													fontSize: "10px",
-													fontWeight: 700,
-													textTransform: "capitalize",
-													borderRadius: "calc(var(--radius, 0.5rem) * 0.75)",
-													border:
-														fontCategory === cat
-															? "1.5px solid var(--primary)"
-															: "1px solid var(--border)",
-													backgroundColor:
-														fontCategory === cat
-															? "var(--primary)"
-															: "var(--card)",
-													color:
-														fontCategory === cat
-															? "var(--canvas)"
-															: "var(--text-primary)",
-													cursor: "pointer",
-													whiteSpace: "nowrap",
-												}}
-											>
-												{cat}
-											</button>
-										),
-									)}
-								</div>
-
-								{/* Fonts List with Clear Selection Highlighting */}
-								<div
-									style={{
-										display: "flex",
-										flexDirection: "column",
-										gap: "6px",
-										maxHeight: "280px",
-										overflowY: "auto",
-									}}
-								>
-									{fontsList.length === 0 ? (
-										<div
-											style={{
-												padding: "24px 16px",
-												textAlign: "center",
-												borderRadius: "var(--radius, 0.5rem)",
-												backgroundColor: "var(--card)",
-												border: "1px dashed var(--border)",
-												color: "var(--text-muted)",
-												fontSize: "12px",
-											}}
-										>
-											No fonts found matching "{fontSearch}"
-										</div>
-									) : (
-										fontsList.map((f) => {
-											const isHeading =
-												cleanFontName(tokens.fontHeading) ===
-												cleanFontName(f.family);
-											const isBody =
-												cleanFontName(tokens.fontBody) ===
-												cleanFontName(f.family);
-											const isBoth = isHeading && isBody;
-											const hasActiveRole = isHeading || isBody;
-
-											return (
-												<div
-													key={f.id}
-													style={{
-														display: "flex",
-														alignItems: "center",
-														justifyContent: "space-between",
-														padding: "8px 12px",
-														borderRadius: "var(--radius, 0.5rem)",
-														backgroundColor: hasActiveRole
-															? "var(--surface)"
-															: "var(--card)",
-														border: hasActiveRole
-															? "2px solid var(--primary)"
-															: "1px solid var(--border)",
-														boxShadow: hasActiveRole
-															? "0 0 0 1px var(--primary)"
-															: "none",
-														transition: "all 0.15s ease",
-													}}
-												>
-													<div
-														style={{ minWidth: 0, flex: 1, marginRight: "8px" }}
-													>
-														<div
-															style={{
-																display: "flex",
-																alignItems: "center",
-																gap: "6px",
-															}}
-														>
-															<span
-																style={{
-																	fontSize: "13px",
-																	fontWeight: hasActiveRole ? 700 : 500,
-																	fontFamily: `'${f.family}', sans-serif`,
-																	color: hasActiveRole
-																		? "var(--primary)"
-																		: "var(--text-primary)",
-																}}
-															>
-																{f.family}
-															</span>
-															{isBoth ? (
-																<span
-																	style={{
-																		fontSize: "9px",
-																		fontWeight: 800,
-																		padding: "1px 5px",
-																		borderRadius: "3px",
-																		backgroundColor: "var(--primary)",
-																		color: "var(--canvas)",
-																	}}
-																>
-																	HEAD & BODY
-																</span>
-															) : isHeading ? (
-																<span
-																	style={{
-																		fontSize: "9px",
-																		fontWeight: 800,
-																		padding: "1px 5px",
-																		borderRadius: "3px",
-																		backgroundColor: "var(--primary)",
-																		color: "var(--canvas)",
-																	}}
-																>
-																	HEADING
-																</span>
-															) : isBody ? (
-																<span
-																	style={{
-																		fontSize: "9px",
-																		fontWeight: 800,
-																		padding: "1px 5px",
-																		borderRadius: "3px",
-																		backgroundColor: "var(--primary)",
-																		color: "var(--canvas)",
-																	}}
-																>
-																	BODY
-																</span>
-															) : null}
-														</div>
-														<div
-															style={{
-																fontSize: "10px",
-																color: "var(--text-muted)",
-															}}
-														>
-															{f.category} •{" "}
-															{f.variable
-																? "Variable"
-																: `${f.weights ? f.weights.length : 1} weights`}
-														</div>
-														<div
-															style={{
-																fontSize: "11px",
-																fontFamily: `'${f.family}', sans-serif`,
-																color: "var(--text-muted)",
-																marginTop: "3px",
-																letterSpacing: "0.02em",
-															}}
-														>
-															Sphinx of black quartz, judge my vow
-														</div>
-													</div>
-
-													<div
-														style={{
-															display: "flex",
-															gap: "4px",
-															flexShrink: 0,
-														}}
-													>
-														<button
-															type="button"
-															onClick={() => applyFont(f.family, "heading")}
-															title={
-																isHeading
-																	? "Active as Heading Font"
-																	: "Set as Heading Font"
-															}
-															style={{
-																padding: "4px 8px",
-																fontSize: "10px",
-																fontWeight: 800,
-																borderRadius:
-																	"calc(var(--radius, 0.5rem) * 0.5)",
-																border: isHeading
-																	? "1.5px solid var(--primary)"
-																	: "1px solid var(--border)",
-																backgroundColor: isHeading
-																	? "var(--primary)"
-																	: "var(--card)",
-																color: isHeading
-																	? "var(--canvas)"
-																	: "var(--text-primary)",
-																cursor: "pointer",
-																transition: "all 0.15s ease",
-															}}
-														>
-															H
-														</button>
-														<button
-															type="button"
-															onClick={() => applyFont(f.family, "body")}
-															title={
-																isBody
-																	? "Active as Body Font"
-																	: "Set as Body Font"
-															}
-															style={{
-																padding: "4px 8px",
-																fontSize: "10px",
-																fontWeight: 800,
-																borderRadius:
-																	"calc(var(--radius, 0.5rem) * 0.5)",
-																border: isBody
-																	? "1.5px solid var(--primary)"
-																	: "1px solid var(--border)",
-																backgroundColor: isBody
-																	? "var(--primary)"
-																	: "var(--card)",
-																color: isBody
-																	? "var(--canvas)"
-																	: "var(--text-primary)",
-																cursor: "pointer",
-																transition: "all 0.15s ease",
-															}}
-														>
-															B
-														</button>
-														<button
-															type="button"
-															onClick={() => applyFont(f.family, "both")}
-															title="Set for Both Heading and Body"
-															style={{
-																padding: "4px 8px",
-																fontSize: "10px",
-																fontWeight: 800,
-																borderRadius:
-																	"calc(var(--radius, 0.5rem) * 0.5)",
-																border: isBoth
-																	? "1.5px solid var(--primary)"
-																	: "1px solid var(--border)",
-																backgroundColor: isBoth
-																	? "var(--primary)"
-																	: "transparent",
-																color: isBoth
-																	? "var(--canvas)"
-																	: "var(--text-primary)",
-																cursor: "pointer",
-																transition: "all 0.15s ease",
-															}}
-														>
-															Both
-														</button>
-													</div>
-												</div>
-											);
-										})
-									)}
-								</div>
-							</div>
-						</>
-					)}
-
-					{/* TAB 3: SHADOW CONTROLS */}
-					{activeTab === "shadows" && (
-						<>
-							{/* SECTION 1: TACTILE ON-HOVER PHYSICS TOGGLE */}
-							<div
-								style={{
-									padding: "16px",
-									borderRadius: "var(--radius, 0.5rem)",
-									backgroundColor: "var(--card)",
-									border:
-										tokens.tactile === "true"
-											? "2px solid var(--primary)"
-											: "1px solid var(--border)",
-									boxShadow:
-										tokens.tactile === "true"
-											? "0 0 0 1px var(--primary)"
-											: "none",
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "space-between",
-									gap: "12px",
-									transition: "all 0.15s ease",
-								}}
-							>
-								<div>
-									<div
-										style={{
-											display: "flex",
-											alignItems: "center",
-											gap: "6px",
-										}}
-									>
-										<span
-											style={{
-												fontSize: "13px",
-												fontWeight: 700,
-												color: "var(--text-primary)",
-											}}
-										>
-											Tactile On-Hover Physics
-										</span>
-										{tokens.tactile === "true" && (
-											<span
-												style={{
-													fontSize: "9px",
-													fontWeight: 800,
-													padding: "2px 6px",
-													borderRadius: "3px",
-													backgroundColor: "var(--primary)",
-													color: "var(--canvas)",
-													letterSpacing: "0.05em",
-												}}
-											>
-												ACTIVE
+										<div className="flex items-center justify-between mb-2">
+											<span className="font-semibold font-heading">
+												{p.name}
 											</span>
-										)}
-									</div>
-									<div
-										style={{
-											fontSize: "11px",
-											color: "var(--text-muted)",
-											marginTop: "2px",
-										}}
-									>
-										Mechanical 2px hover displacement & 4px active press click
-										physics on buttons & cards
-									</div>
-								</div>
-
-								{/* Sleek Toggle Switch */}
-								<button
-									type="button"
-									role="switch"
-									aria-checked={tokens.tactile === "true"}
-									onClick={() => {
-										const next = tokens.tactile === "true" ? "false" : "true";
-										setCustomTokens({ tactile: next });
-									}}
-									style={{
-										width: "48px",
-										height: "26px",
-										borderRadius: "13px",
-										backgroundColor:
-											tokens.tactile === "true"
-												? "var(--primary)"
-												: "var(--surface)",
-										border: "1px solid var(--border)",
-										position: "relative",
-										cursor: "pointer",
-										transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-										padding: 0,
-										outline: "none",
-										flexShrink: 0,
-									}}
-								>
-									<span
-										style={{
-											position: "absolute",
-											top: "2px",
-											left: tokens.tactile === "true" ? "24px" : "2px",
-											width: "20px",
-											height: "20px",
-											borderRadius: "50%",
-											backgroundColor:
-												tokens.tactile === "true"
-													? "var(--canvas)"
-													: "var(--text-muted)",
-											transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-											boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-										}}
-									/>
-								</button>
-							</div>
-
-							{/* SECTION 2: GLOW COLOR SELECTOR & PICKER */}
-							<div
-								style={{
-									padding: "16px",
-									borderRadius: "var(--radius, 0.5rem)",
-									backgroundColor: "var(--card)",
-									border: "1px solid var(--border)",
-									display: "flex",
-									flexDirection: "column",
-									gap: "12px",
-								}}
-							>
-								<div
-									style={{
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "space-between",
-									}}
-								>
-									<div>
-										<span
-											style={{
-												fontSize: "12px",
-												fontWeight: 700,
-												letterSpacing: "0.06em",
-												textTransform: "uppercase",
-												color: "var(--text-primary)",
-											}}
-										>
-											Glow Color Picker
-										</span>
-										<div
-											style={{
-												fontSize: "11px",
-												color: "var(--text-muted)",
-												marginTop: "2px",
-											}}
-										>
-											Choose or customize the color of the Neon Glow shadow
-										</div>
-									</div>
-									<div
-										style={{
-											width: "24px",
-											height: "24px",
-											borderRadius: "50%",
-											backgroundColor: glowColor,
-											border: "2px solid var(--border)",
-											boxShadow: `0 0 12px ${glowColor}`,
-										}}
-									/>
-								</div>
-
-								{/* Preset Glow Color Chips */}
-								<div
-									style={{
-										display: "flex",
-										flexWrap: "wrap",
-										gap: "6px",
-										alignItems: "center",
-									}}
-								>
-									{[
-										{
-											label: "Theme Primary",
-											color: tokens.primary || "#38BDF8",
-										},
-										{
-											label: "Theme Accent",
-											color: tokens.accent || "#34D399",
-										},
-										{ label: "Cyan", color: "#00F0FF" },
-										{ label: "Sky Blue", color: "#38BDF8" },
-										{ label: "Violet", color: "#A855F7" },
-										{ label: "Hot Pink", color: "#EC4899" },
-										{ label: "Emerald", color: "#10B981" },
-										{ label: "Gold", color: "#F59E0B" },
-										{ label: "Crimson", color: "#EF4444" },
-									].map((chip) => {
-										const isGlowActive =
-											glowColor.toLowerCase() === chip.color.toLowerCase();
-										return (
-											<button
-												key={chip.label}
-												type="button"
-												onClick={() => {
-													setGlowColor(chip.color);
-													const glow = getGlowValues(chip.color);
-													setCustomTokens({
-														shadow: glow.value,
-														shadowSm: glow.sm,
-														shadowLg: glow.lg,
-														glowColor: chip.color,
-													});
-												}}
-												style={{
-													display: "flex",
-													alignItems: "center",
-													gap: "5px",
-													padding: "5px 9px",
-													borderRadius: "calc(var(--radius, 0.5rem) * 0.75)",
-													border: isGlowActive
-														? "1.5px solid var(--primary)"
-														: "1px solid var(--border)",
-													backgroundColor: isGlowActive
-														? "var(--surface)"
-														: "var(--card)",
-													color: "var(--text-primary)",
-													fontSize: "11px",
-													fontWeight: 600,
-													cursor: "pointer",
-												}}
-											>
-												<span
-													style={{
-														width: "10px",
-														height: "10px",
-														borderRadius: "50%",
-														backgroundColor: chip.color,
-														boxShadow: `0 0 6px ${chip.color}`,
-													}}
+											{isSelected && (
+												<HugeiconsIcon
+													icon={CheckmarkBadge01Icon}
+													size={14}
+													className="text-primary"
 												/>
-												{chip.label}
-											</button>
-										);
-									})}
-
-									{/* Custom color input */}
-									<label
-										style={{
-											display: "flex",
-											alignItems: "center",
-											gap: "4px",
-											padding: "5px 9px",
-											borderRadius: "calc(var(--radius, 0.5rem) * 0.75)",
-											border: "1px solid var(--border)",
-											backgroundColor: "var(--surface)",
-											fontSize: "11px",
-											fontWeight: 600,
-											cursor: "pointer",
-											color: "var(--text-primary)",
-										}}
-									>
-										Custom
-										<input
-											type="color"
-											value={glowColor}
-											onChange={(e) => {
-												const val = e.target.value;
-												setGlowColor(val);
-												const glow = getGlowValues(val);
-												setCustomTokens({
-													shadow: glow.value,
-													shadowSm: glow.sm,
-													shadowLg: glow.lg,
-													glowColor: val,
-												});
-											}}
-											style={{
-												width: "18px",
-												height: "18px",
-												padding: 0,
-												border: "none",
-												borderRadius: "3px",
-												cursor: "pointer",
-												backgroundColor: "transparent",
-											}}
-										/>
-									</label>
-								</div>
-							</div>
-
-							{/* SECTION 3: SHADOW ELEVATION PRESETS */}
-							<div>
-								<div
-									style={{
-										fontSize: "11px",
-										fontWeight: 700,
-										letterSpacing: "0.06em",
-										textTransform: "uppercase",
-										color: "var(--text-primary)",
-										marginBottom: "8px",
-									}}
-								>
-									Shadow Elevation Presets
-								</div>
-								<div
-									style={{
-										display: "grid",
-										gridTemplateColumns: "repeat(2, 1fr)",
-										gap: "8px",
-									}}
-								>
-									{shadowPresets.map((sp) => {
-										const isSelected = tokens.shadow === sp.value;
-										return (
-											<button
-												key={sp.label}
-												type="button"
-												onClick={() => {
-													setCustomTokens({
-														shadow: sp.value,
-														shadowSm: sp.sm,
-														shadowLg: sp.lg,
-													});
-												}}
-												style={{
-													padding: "12px",
-													borderRadius: "var(--radius, 0.5rem)",
-													border: isSelected
-														? "2px solid var(--primary)"
-														: "1px solid var(--border)",
-													backgroundColor: isSelected
-														? "var(--surface)"
-														: "var(--card)",
-													color: "var(--text-primary)",
-													cursor: "pointer",
-													textAlign: "left",
-													display: "flex",
-													flexDirection: "column",
-													gap: "6px",
-													boxShadow: isSelected
-														? sp.value !== "none"
-															? sp.value
-															: "none"
-														: "none",
-													transition: "all 0.15s ease",
-												}}
-											>
-												<div
-													style={{
-														display: "flex",
-														justifyContent: "space-between",
-														alignItems: "center",
-													}}
-												>
-													<span
-														style={{
-															fontSize: "12px",
-															fontWeight: 700,
-															color: isSelected
-																? "var(--primary)"
-																: "var(--text-primary)",
-														}}
-													>
-														{sp.label}
-													</span>
-													{isSelected && (
-														<CheckIcon
-															width={14}
-															height={14}
-															color="var(--primary)"
-														/>
-													)}
-												</div>
-												<div
-													style={{
-														fontSize: "10px",
-														color: "var(--text-muted)",
-													}}
-												>
-													{sp.label === "Neon Glow"
-														? "Dynamic glow with chosen color"
-														: sp.value === "none"
-															? "Flat / No elevation"
-															: "Multi-layer ambient depth"}
-												</div>
-											</button>
-										);
-									})}
-								</div>
-							</div>
-
-							{/* SECTION 4: LIVE SHADOW PREVIEW BOX */}
-							<div>
-								<div
-									style={{
-										fontSize: "11px",
-										fontWeight: 700,
-										letterSpacing: "0.06em",
-										textTransform: "uppercase",
-										color: "var(--text-primary)",
-										marginBottom: "8px",
-									}}
-								>
-									Live Shadow Preview
-								</div>
-								<div
-									style={{
-										padding: "24px",
-										borderRadius: "var(--radius, 0.5rem)",
-										backgroundColor: "var(--card)",
-										border: "1px solid var(--border)",
-										boxShadow: tokens.shadow || "none",
-										textAlign: "center",
-										display: "flex",
-										flexDirection: "column",
-										alignItems: "center",
-										gap: "8px",
-										transition: "box-shadow 0.25s ease",
-									}}
-								>
-									<Layers01Icon width={28} height={28} color="var(--primary)" />
-									<div
-										style={{
-											fontSize: "13px",
-											fontWeight: 700,
-											color: "var(--text-primary)",
-										}}
-									>
-										Active Shadow Rendering
-									</div>
-									<div
-										style={{
-											fontSize: "11px",
-											color: "var(--text-muted)",
-											fontFamily: "monospace",
-										}}
-									>
-										var(--shadow)
-									</div>
-								</div>
-							</div>
-
-							{/* SECTION 5: DIRECT SHADOW VALUE EDITORS */}
-							<div>
-								<div
-									style={{
-										fontSize: "11px",
-										fontWeight: 700,
-										letterSpacing: "0.06em",
-										textTransform: "uppercase",
-										color: "var(--text-primary)",
-										marginBottom: "8px",
-									}}
-								>
-									Custom Shadow Variables
-								</div>
-								<div
-									style={{
-										display: "flex",
-										flexDirection: "column",
-										gap: "8px",
-									}}
-								>
-									{[
-										{
-											label: "Default Shadow (--shadow)",
-											key: "shadow" as const,
-										},
-										{
-											label: "Small Shadow (--shadow-sm)",
-											key: "shadowSm" as const,
-										},
-										{
-											label: "Large Shadow (--shadow-lg)",
-											key: "shadowLg" as const,
-										},
-									].map((field) => (
-										<div
-											key={field.key}
-											style={{
-												padding: "8px 10px",
-												borderRadius: "var(--radius, 0.5rem)",
-												backgroundColor: "var(--card)",
-												border: "1px solid var(--border)",
-												display: "flex",
-												flexDirection: "column",
-												gap: "4px",
-											}}
-										>
-											<label
-												style={{
-													fontSize: "11px",
-													fontWeight: 700,
-													color: "var(--text-primary)",
-												}}
-											>
-												{field.label}
-											</label>
-											<input
-												type="text"
-												value={(tokens[field.key] as string) || ""}
-												onChange={(e) =>
-													setCustomTokens({ [field.key]: e.target.value })
-												}
-												placeholder="e.g. 0 10px 15px -3px rgba(0,0,0,0.4)"
-												style={{
-													fontSize: "11px",
-													fontFamily: "monospace",
-													padding: "6px 8px",
-													borderRadius: "calc(var(--radius, 0.5rem) * 0.5)",
-													backgroundColor: "var(--surface)",
-													color: "var(--text-primary)",
-													border: "1px solid var(--border)",
-													outline: "none",
-												}}
+											)}
+										</div>
+										<div className="flex items-center gap-1.5">
+											<span
+												className="w-3.5 h-3.5 rounded-full border border-border/40 shadow-xs"
+												style={{ backgroundColor: previewColors.canvas }}
+											/>
+											<span
+												className="w-3.5 h-3.5 rounded-full border border-border/40 shadow-xs"
+												style={{ backgroundColor: previewColors.primary }}
+											/>
+											<span
+												className="w-3.5 h-3.5 rounded-full border border-border/40 shadow-xs"
+												style={{ backgroundColor: previewColors.secondary }}
+											/>
+											<span
+												className="w-3.5 h-3.5 rounded-full border border-border/40 shadow-xs"
+												style={{ backgroundColor: previewColors.accent }}
 											/>
 										</div>
-									))}
+									</button>
+								);
+							})}
+						</div>
+					</div>
+
+					{/* SECTION 2: TYPOGRAPHY SYSTEM */}
+					<div className="mt-6">
+						<div className="flex items-center justify-between mb-2.5">
+							<label
+								className="text-xs font-semibold tracking-wider uppercase flex items-center gap-1.5"
+								style={{ color: tokens.textMuted }}
+							>
+								<HugeiconsIcon icon={TextFontIcon} size={16} />
+								Typography System
+							</label>
+							<span className="text-[10px] font-mono px-2 py-0.5 rounded-badge bg-primary/10 text-primary border border-primary/20">
+								{activeFont === "custom" ? "Custom Google Font" : "Preset"}
+							</span>
+						</div>
+
+						{/* Current Active Fonts Indicator */}
+						<div
+							className={`p-2.5 rounded-card border mb-3 text-xs space-y-1.5 transition-all ${
+								activeFont === "custom"
+									? "border-primary ring-1 ring-primary"
+									: "border-border"
+							}`}
+							style={{ backgroundColor: tokens.card }}
+						>
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-1.5">
+									<span style={{ color: tokens.textMuted }}>Heading Font:</span>
+									<span className="font-semibold text-primary font-mono text-[11px]">
+										{extractFontFamily(tokens.fontHeading)}
+									</span>
+								</div>
+								{activeFont === "custom" && (
+									<span className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+										<HugeiconsIcon icon={CheckmarkBadge01Icon} size={12} />
+										Active Custom Font
+									</span>
+								)}
+							</div>
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-1.5">
+									<span style={{ color: tokens.textMuted }}>Body Font:</span>
+									<span className="font-semibold text-secondary font-mono text-[11px]">
+										{extractFontFamily(tokens.fontBody)}
+									</span>
 								</div>
 							</div>
-						</>
-					)}
+						</div>
+
+						{/* Preset Pairings */}
+						<div className="space-y-2 mb-3">
+							{FONT_PAIRINGS.map((f) => {
+								const isSelected = activeFont === f.id;
+								return (
+									<button
+										type="button"
+										key={f.id}
+										onClick={() => selectFontPairing(f.id)}
+										className={`w-full text-left px-3.5 py-2.5 rounded-card border text-xs transition-all flex items-center justify-between cursor-pointer ${
+											isSelected
+												? "border-primary ring-1 ring-primary"
+												: "border-border hover:border-text-muted"
+										}`}
+										style={{ backgroundColor: tokens.card }}
+									>
+										<div>
+											<p className="font-medium">{f.name}</p>
+											<p
+												className="text-[11px]"
+												style={{ color: tokens.textMuted }}
+											>
+												UI: {f.headingName} • Body: {f.bodyName}
+											</p>
+										</div>
+										{isSelected && (
+											<HugeiconsIcon
+												icon={CheckmarkBadge01Icon}
+												size={16}
+												className="text-primary"
+											/>
+										)}
+									</button>
+								);
+							})}
+						</div>
+
+						{/* Custom Google Fonts Explorer Toggle */}
+						<div
+							className="rounded-card border overflow-hidden transition-all"
+							style={{
+								backgroundColor: tokens.card,
+								borderColor: tokens.border,
+							}}
+						>
+							<button
+								type="button"
+								onClick={() => setShowGoogleFonts(!showGoogleFonts)}
+								className="w-full px-3.5 py-2.5 flex items-center justify-between text-xs font-medium cursor-pointer hover:bg-white/5 transition-colors"
+							>
+								<div className="flex items-center gap-2 text-text-primary">
+									<HugeiconsIcon
+										icon={SparklesIcon}
+										size={15}
+										className="text-primary"
+									/>
+									<span>Explore 1,900+ Google Fonts</span>
+								</div>
+								<span className="text-[10px] font-mono px-2 py-0.5 rounded-badge bg-primary/10 text-primary">
+									{showGoogleFonts ? "Collapse" : "Open API Explorer"}
+								</span>
+							</button>
+
+							{showGoogleFonts && (
+								<div className="p-3 border-t border-border/80 space-y-3">
+									{/* Search Input */}
+									<div className="relative">
+										<HugeiconsIcon
+											icon={Search01Icon}
+											size={14}
+											className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+										/>
+										<input
+											type="text"
+											value={fontSearch}
+											onChange={(e) => setFontSearch(e.target.value)}
+											placeholder="Search Google Fonts (e.g. Outfit, Space Grotesk)..."
+											className="w-full pl-8 pr-3 py-1.5 rounded-btn bg-canvas text-xs text-text-primary placeholder:text-text-muted border border-border focus:outline-none focus:border-primary font-mono"
+											style={{
+												backgroundColor: tokens.canvas,
+												borderColor: tokens.border,
+												color: tokens.textPrimary,
+											}}
+										/>
+									</div>
+
+									{/* Category Tabs */}
+									<div className="flex flex-wrap gap-1">
+										{["all", "sans-serif", "monospace", "serif", "display"].map(
+											(cat) => (
+												<button
+													type="button"
+													key={cat}
+													onClick={() => setFontCategory(cat)}
+													className={`px-2 py-0.5 rounded-badge text-[10px] capitalize transition-all cursor-pointer ${
+														fontCategory === cat
+															? "bg-primary text-canvas font-medium"
+															: "bg-canvas text-text-muted hover:text-text-primary border border-border"
+													}`}
+													style={{
+														backgroundColor:
+															fontCategory === cat
+																? tokens.primary
+																: tokens.card,
+														color:
+															fontCategory === cat
+																? tokens.canvas
+																: tokens.textMuted,
+														borderColor: tokens.border,
+													}}
+												>
+													{cat}
+												</button>
+											),
+										)}
+									</div>
+
+									{/* Font List Container */}
+									<div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
+										{isLoadingFonts ? (
+											<p className="text-center py-4 text-[11px] text-text-muted font-mono animate-pulse">
+												Loading Fonts...
+											</p>
+										) : fontsList.length === 0 ? (
+											<p className="text-center py-4 text-[11px] text-text-muted font-mono">
+												No matching fonts found
+											</p>
+										) : (
+											fontsList.map((f) => {
+												const currentHeading = extractFontFamily(
+													tokens.fontHeading,
+												);
+												const currentBody = extractFontFamily(tokens.fontBody);
+												const isHeading =
+													currentHeading.toLowerCase() ===
+													f.family.toLowerCase();
+												const isBody =
+													currentBody.toLowerCase() === f.family.toLowerCase();
+
+												return (
+													<div
+														key={f.id}
+														className="flex items-center justify-between p-2 rounded-btn bg-canvas/80 border border-border/70 hover:border-border text-xs"
+														style={{
+															backgroundColor: tokens.card,
+															borderColor: tokens.border,
+														}}
+													>
+														<div className="truncate mr-2">
+															<p className="font-medium truncate text-text-primary">
+																{f.family}
+															</p>
+															<span className="text-[9px] text-text-muted font-mono capitalize">
+																{f.category}
+															</span>
+														</div>
+														<div className="flex items-center gap-1 shrink-0">
+															<button
+																type="button"
+																onClick={() => applyCustomFont(f, "heading")}
+																title="Set as Heading Font"
+																className={`px-2 py-1 rounded-badge text-[10px] font-mono transition-colors cursor-pointer ${
+																	isHeading
+																		? "bg-primary text-canvas font-bold"
+																		: "bg-card text-text-muted hover:text-primary border border-border"
+																}`}
+																style={{
+																	backgroundColor: isHeading
+																		? tokens.primary
+																		: tokens.canvas,
+																	color: isHeading
+																		? tokens.canvas
+																		: tokens.textMuted,
+																	borderColor: tokens.border,
+																}}
+															>
+																H
+															</button>
+															<button
+																type="button"
+																onClick={() => applyCustomFont(f, "body")}
+																title="Set as Body Font"
+																className={`px-2 py-1 rounded-badge text-[10px] font-mono transition-colors cursor-pointer ${
+																	isBody
+																		? "bg-secondary text-canvas font-bold"
+																		: "bg-card text-text-muted hover:text-secondary border border-border"
+																}`}
+																style={{
+																	backgroundColor: isBody
+																		? tokens.secondary
+																		: tokens.canvas,
+																	color: isBody
+																		? tokens.canvas
+																		: tokens.textMuted,
+																	borderColor: tokens.border,
+																}}
+															>
+																B
+															</button>
+															<button
+																type="button"
+																onClick={() => applyCustomFont(f, "both")}
+																title="Set for Both"
+																className="px-2 py-1 rounded-badge text-[10px] font-mono bg-card text-text-muted hover:text-text-primary border border-border transition-colors cursor-pointer"
+																style={{
+																	backgroundColor: tokens.canvas,
+																	color: tokens.textMuted,
+																	borderColor: tokens.border,
+																}}
+															>
+																Both
+															</button>
+														</div>
+													</div>
+												);
+											})
+										)}
+									</div>
+								</div>
+							)}
+						</div>
+					</div>
+
+					{/* SECTION 3: SURFACES & ACCENTS */}
+					<div className="mt-6">
+						<label
+							className="text-xs font-semibold tracking-wider uppercase block mb-2.5"
+							style={{ color: tokens.textMuted }}
+						>
+							Surfaces &amp; Accents
+						</label>
+						<div className="space-y-2.5 text-xs">
+							{[
+								{
+									key: "canvas" as const,
+									label: "Canvas Background",
+									title: "Canvas Background",
+								},
+								{
+									key: "surface" as const,
+									label: "Elevated Surface",
+									title: "Elevated Surface",
+								},
+								{
+									key: "primary" as const,
+									label: "Primary Accent",
+									title: "Primary Brand",
+								},
+								{
+									key: "secondary" as const,
+									label: "Secondary Accent",
+									title: "Secondary System",
+								},
+								{
+									key: "accent" as const,
+									label: "Live Indicator / Accent",
+									title: "Accent Glow",
+								},
+							].map(({ key, label, title }) => {
+								const presetTokensForCurrentMode =
+									isLight && currentPresetObj.lightTokens
+										? {
+												...currentPresetObj.tokens,
+												...currentPresetObj.lightTokens,
+											}
+										: currentPresetObj.tokens;
+								const originalColor = (
+									presetTokensForCurrentMode as Record<
+										string,
+										string | undefined
+									>
+								)[key];
+								const isCustomized =
+									Boolean(originalColor) &&
+									tokens[key]?.toLowerCase() !== originalColor?.toLowerCase();
+
+								return (
+									<div
+										key={key}
+										className="flex items-center justify-between p-2.5 rounded-card border border-border"
+										style={{ backgroundColor: tokens.card }}
+									>
+										<span>{label}</span>
+										<div className="flex items-center gap-2">
+											{isCustomized && originalColor ? (
+												<button
+													type="button"
+													onClick={() => updateToken(key, originalColor)}
+													title={`Reset to ${currentPresetObj.name} default (${originalColor})`}
+													className="p-1 rounded hover:bg-white/10 text-primary transition-colors cursor-pointer flex items-center justify-center"
+												>
+													<HugeiconsIcon icon={RotateLeft01Icon} size={13} />
+												</button>
+											) : null}
+											<span className="font-mono text-[11px] opacity-75">
+												{tokens[key]}
+											</span>
+											<ColorPickerField
+												value={tokens[key]}
+												onChange={(val) => updateToken(key, val)}
+												title={title}
+											/>
+										</div>
+									</div>
+								);
+							})}
+						</div>
+					</div>
+
+					{/* SECTION 4: CARD CORNER RADIUS */}
+					<div className="mt-6 pb-2">
+						<div className="flex items-center justify-between text-xs mb-2">
+							<span
+								className="font-semibold tracking-wider uppercase"
+								style={{ color: tokens.textMuted }}
+							>
+								Card Corner Radius
+							</span>
+							<span className="font-mono text-primary font-bold">
+								{tokens.radius}
+							</span>
+						</div>
+						<div className="grid grid-cols-6 gap-1">
+							{DEFINED_RADIUS_OPTIONS.map((rad) => {
+								const isSelected =
+									tokens.radius === rad ||
+									(rad === "0rem" &&
+										(tokens.radius === "0" ||
+											tokens.radius === "0px" ||
+											tokens.radius === "0rem"));
+								return (
+									<button
+										type="button"
+										key={rad}
+										onClick={() => updateToken("radius", rad)}
+										className={`py-2 text-[11px] font-mono border transition-all cursor-pointer ${
+											isSelected
+												? "border-primary ring-1 ring-primary font-bold text-primary"
+												: "border-border hover:border-text-muted text-text-muted"
+										}`}
+										style={{
+											backgroundColor: tokens.card,
+											borderRadius: rad,
+										}}
+									>
+										{rad}
+									</button>
+								);
+							})}
+						</div>
+					</div>
+
+					{/* SECTION 5: TACTICAL EFFECT (TACTILE PHYSICS) */}
+					<div className="mt-6 pt-5 border-t border-border">
+						<div className="flex items-center justify-between text-xs mb-2">
+							<div className="flex items-center gap-1.5">
+								<span
+									className="font-semibold tracking-wider uppercase"
+									style={{ color: tokens.textMuted }}
+								>
+									Tactical Effect (Tactile Physics)
+								</span>
+							</div>
+							<button
+								type="button"
+								onClick={toggleTactile}
+								className={`px-2.5 py-1 rounded-badge text-[11px] font-mono font-bold border transition-all cursor-pointer ${
+									tokens.tactile === "true"
+										? "border-primary bg-primary/20 text-primary ring-1 ring-primary"
+										: "border-border text-text-muted hover:border-text-muted"
+								}`}
+							>
+								{tokens.tactile === "true" ? "ACTIVE" : "DISABLED"}
+							</button>
+						</div>
+						<p
+							className="text-[11px] leading-relaxed mb-3"
+							style={{ color: tokens.textMuted }}
+						>
+							Mechanical 2px hover displacement &amp; 4px active press click
+							physics on buttons &amp; cards.
+						</p>
+						<div
+							className="p-3.5 rounded-card border border-border space-y-2.5"
+							style={{ backgroundColor: tokens.card }}
+						>
+							<div className="flex items-center justify-between text-xs">
+								<span className="font-medium text-text-primary">
+									Interactive Physics Test
+								</span>
+								<span className="text-[10px] font-mono px-2 py-0.5 rounded-badge bg-primary/10 text-primary border border-primary/20">
+									{tactileClicks > 0
+										? `${tactileClicks} Click${tactileClicks > 1 ? "s" : ""} Registered`
+										: "Ready to Test"}
+								</span>
+							</div>
+							<button
+								type="button"
+								onClick={() => {
+									setTactileClicks((c) => c + 1);
+									setShowClickFeedback(true);
+									setTimeout(() => setShowClickFeedback(false), 500);
+									if (typeof window !== "undefined" && "vibrate" in navigator) {
+										navigator.vibrate?.(20);
+									}
+								}}
+								className={`tactile-item tactile-always-active w-full py-2 px-3 rounded-btn font-mono text-xs font-bold transition-all cursor-pointer select-none text-center ${
+									showClickFeedback
+										? "bg-accent text-canvas scale-95"
+										: "bg-primary text-canvas hover:opacity-95"
+								}`}
+								style={{
+									borderRadius: tokens.radius,
+									backgroundColor: showClickFeedback
+										? tokens.accent
+										: tokens.primary,
+									color: tokens.canvas,
+								}}
+							>
+								{showClickFeedback
+									? "💥 Mechanical Pulse Registered!"
+									: "Click & Feel Physics"}
+							</button>
+						</div>
+					</div>
+
+					{/* SECTION 6: ELEVATION & SHADOWS */}
+					<div className="mt-6 pt-5 border-t border-border">
+						<div className="flex items-center justify-between text-xs mb-2">
+							<span
+								className="font-semibold tracking-wider uppercase"
+								style={{ color: tokens.textMuted }}
+							>
+								Elevation &amp; Shadows
+							</span>
+							<span className="text-[11px] font-mono text-primary font-bold">
+								{SHADOW_PRESETS.find((p) => p.value === tokens.shadow)?.label ||
+									(tokens.shadow?.startsWith("0 0 20px")
+										? "Neon Glow"
+										: "Custom")}
+							</span>
+						</div>
+
+						{/* Shadow Presets Grid */}
+						<div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+							{SHADOW_PRESETS.map((p) => {
+								const isSelected =
+									p.value === tokens.shadow ||
+									(p.isGlow && tokens.shadow?.startsWith("0 0 20px"));
+								return (
+									<button
+										type="button"
+										key={p.id}
+										onClick={() => applyShadowPreset(p.id)}
+										className={`p-2 rounded-btn text-xs text-left border transition-all cursor-pointer flex flex-col justify-between h-14 ${
+											isSelected
+												? "border-primary ring-1 ring-primary font-bold text-primary"
+												: "border-border hover:border-text-muted text-text-muted"
+										}`}
+										style={{ backgroundColor: tokens.card }}
+									>
+										<span className="truncate">{p.label}</span>
+										<span className="text-[9px] font-mono opacity-60 truncate">
+											{p.isGlow
+												? "Glow"
+												: p.value === "none"
+													? "Flat"
+													: "Elevated"}
+										</span>
+									</button>
+								);
+							})}
+						</div>
+
+						{/* Glow Color Customizer */}
+						<div
+							className="p-3 rounded-card border border-border space-y-2 mb-3"
+							style={{ backgroundColor: tokens.card }}
+						>
+							<div className="flex items-center justify-between text-xs">
+								<span className="font-medium text-text-primary">
+									Neon Glow Color
+								</span>
+								<div className="flex items-center gap-1.5">
+									<span className="text-[10px] font-mono text-text-muted">
+										{tokens.glowColor || "#38BDF8"}
+									</span>
+									<ColorPickerField
+										value={tokens.glowColor || "#38BDF8"}
+										onChange={(val) => handleGlowColorChange(val)}
+										size="sm"
+										title="Choose custom neon glow color or gradient"
+									/>
+								</div>
+							</div>
+							<div className="flex flex-wrap gap-1.5">
+								{GLOW_COLOR_CHIPS.map((chip) => {
+									const chipHex =
+										chip.color === "primary"
+											? tokens.primary
+											: chip.color === "accent"
+												? tokens.accent
+												: chip.color;
+									const isActive = tokens.glowColor === chipHex;
+									return (
+										<button
+											type="button"
+											key={chip.label}
+											onClick={() => handleGlowColorChange(chip.color)}
+											className={`px-2 py-0.5 rounded-badge text-[10px] border flex items-center gap-1 transition-all cursor-pointer ${
+												isActive
+													? "border-primary text-primary font-bold ring-1 ring-primary"
+													: "border-border text-text-muted hover:border-text-muted"
+											}`}
+										>
+											<span
+												className="w-2 h-2 rounded-full inline-block"
+												style={{ backgroundColor: chipHex }}
+											/>
+											<span>{chip.label}</span>
+										</button>
+									);
+								})}
+							</div>
+						</div>
+
+						{/* Live Elevation Preview Card */}
+						<div
+							className="p-3.5 rounded-card border border-border text-center transition-all my-3"
+							style={{
+								backgroundColor: tokens.card,
+								boxShadow: tokens.shadow || "none",
+								borderRadius: tokens.radius,
+							}}
+						>
+							<span className="text-xs font-medium block text-text-primary">
+								Elevation Preview
+							</span>
+							<span className="text-[10px] font-mono text-text-muted">
+								{tokens.shadow === "none" || !tokens.shadow
+									? "Flat (Elevation 0)"
+									: "Elevated Box Shadow Active"}
+							</span>
+						</div>
+
+						{/* Collapsible Custom Shadow Inputs */}
+						<div>
+							<button
+								type="button"
+								onClick={() =>
+									setShowCustomShadowInputs(!showCustomShadowInputs)
+								}
+								className="text-[11px] font-mono text-primary hover:underline cursor-pointer flex items-center gap-1"
+							>
+								<span>
+									{showCustomShadowInputs
+										? "Hide Custom CSS Shadows"
+										: "Edit Raw Shadow CSS"}
+								</span>
+							</button>
+							{showCustomShadowInputs && (
+								<div className="space-y-2 mt-2 pt-2 border-t border-border">
+									<div>
+										<span className="text-[10px] font-mono text-text-muted block">
+											--shadow
+										</span>
+										<input
+											type="text"
+											value={tokens.shadow || ""}
+											onChange={(e) => updateToken("shadow", e.target.value)}
+											className="w-full px-2 py-1 text-[11px] font-mono rounded bg-canvas border border-border text-text-primary"
+											placeholder="0 4px 6px -1px rgba(0,0,0,0.1)..."
+											style={{
+												backgroundColor: tokens.canvas,
+												borderColor: tokens.border,
+												color: tokens.textPrimary,
+											}}
+										/>
+									</div>
+									<div>
+										<span className="text-[10px] font-mono text-text-muted block">
+											--shadow-sm
+										</span>
+										<input
+											type="text"
+											value={tokens.shadowSm || ""}
+											onChange={(e) => updateToken("shadowSm", e.target.value)}
+											className="w-full px-2 py-1 text-[11px] font-mono rounded bg-canvas border border-border text-text-primary"
+											placeholder="0 1px 2px 0 rgba(0,0,0,0.05)..."
+											style={{
+												backgroundColor: tokens.canvas,
+												borderColor: tokens.border,
+												color: tokens.textPrimary,
+											}}
+										/>
+									</div>
+									<div>
+										<span className="text-[10px] font-mono text-text-muted block">
+											--shadow-lg
+										</span>
+										<input
+											type="text"
+											value={tokens.shadowLg || ""}
+											onChange={(e) => updateToken("shadowLg", e.target.value)}
+											className="w-full px-2 py-1 text-[11px] font-mono rounded bg-canvas border border-border text-text-primary"
+											placeholder="0 10px 15px -3px rgba(0,0,0,0.1)..."
+											style={{
+												backgroundColor: tokens.canvas,
+												borderColor: tokens.border,
+												color: tokens.textPrimary,
+											}}
+										/>
+									</div>
+								</div>
+							)}
+						</div>
+					</div>
 				</div>
 
-				{/* FIXED FOOTER */}
+				{/* FIXED SHEET FOOTER */}
 				<div
-					style={{
-						padding: "16px 20px",
-						borderTop: "1px solid var(--border)",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "space-between",
-						backgroundColor: "var(--surface)",
-						flexShrink: 0,
-						transition: "background-color 200ms ease, border-color 200ms ease",
-					}}
+					className="p-4 border-t border-border shrink-0 flex flex-col gap-2.5 z-10"
+					style={{ backgroundColor: tokens.surface }}
 				>
-					<button
-						type="button"
-						onClick={resetTheme}
-						disabled={!hasCustomizations}
-						style={{
-							display: "flex",
-							alignItems: "center",
-							gap: "6px",
-							padding: "8px 12px",
-							fontSize: "12px",
-							fontWeight: 600,
-							borderRadius: "var(--radius, 0.5rem)",
-							border: "1px solid var(--border)",
-							backgroundColor: "var(--card)",
-							color: hasCustomizations
-								? "var(--text-primary)"
-								: "var(--text-muted)",
-							cursor: hasCustomizations ? "pointer" : "not-allowed",
-							opacity: hasCustomizations ? 1 : 0.5,
-							transition: "all 0.15s ease",
-						}}
-					>
-						<Setup01Icon width={16} height={16} />
-						<span>Reset Defaults</span>
-					</button>
+					<div className="grid grid-cols-3 gap-2">
+						<button
+							type="button"
+							onClick={resetToDefault}
+							className="flex items-center justify-center gap-1.5 text-xs h-9 px-2 rounded-btn border border-border hover:bg-card hover:text-text-primary transition-colors cursor-pointer text-text-muted whitespace-nowrap"
+							title="Reset all settings to default theme"
+						>
+							<HugeiconsIcon
+								icon={RotateLeft01Icon}
+								size={14}
+								className="shrink-0"
+							/>
+							<span>Reset</span>
+						</button>
+
+						<button
+							type="button"
+							onClick={() => {
+								setAdminPassword("");
+								setPublishFeedback(null);
+								setShowGlobalModal(true);
+							}}
+							className="flex items-center justify-center gap-1.5 text-xs h-9 px-2 rounded-btn border border-border hover:border-primary/50 text-text-muted hover:text-text-primary bg-card/60 transition-all cursor-pointer whitespace-nowrap"
+							title="Promote this custom theme to Global Default"
+						>
+							<HugeiconsIcon
+								icon={Globe02Icon}
+								size={14}
+								className="shrink-0"
+							/>
+							<span>Set Global</span>
+						</button>
+
+						<a
+							href="/admin"
+							onClick={() => closeStudio()}
+							className="flex items-center justify-center gap-1.5 text-xs h-9 px-2 rounded-btn border border-border hover:border-primary/50 text-text-muted hover:text-text-primary transition-colors font-mono whitespace-nowrap"
+							title="Open Global Theme Admin Console"
+						>
+							<HugeiconsIcon
+								icon={LockKeyIcon}
+								size={14}
+								className="text-primary shrink-0"
+							/>
+							<span>Admin</span>
+						</a>
+					</div>
 
 					<button
 						type="button"
 						onClick={closeStudio}
+						className="w-full h-10 text-xs rounded-btn font-medium font-heading transition-all active:scale-[0.99] cursor-pointer shadow-md flex items-center justify-center gap-2 whitespace-nowrap"
 						style={{
-							padding: "8px 20px",
-							fontSize: "12px",
-							fontWeight: 600,
-							borderRadius: "var(--radius, 0.5rem)",
-							border: "none",
-							backgroundColor: "var(--primary)",
-							color: resolvedMode === "dark" ? "#000000" : "#FFFFFF",
-							cursor: "pointer",
-							boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
-							transition: "all 0.15s ease",
+							backgroundColor: tokens.primary,
+							color: tokens.canvas,
 						}}
 					>
-						Done
+						Apply &amp; Close
 					</button>
 				</div>
+
+				{/* GLOBAL THEME CONFIRMATION MODAL */}
+				{showGlobalModal && (
+					<div className="absolute inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+						<div
+							className="w-full max-w-sm rounded-card border border-border p-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200"
+							style={{ backgroundColor: tokens.surface }}
+						>
+							<button
+								type="button"
+								onClick={() => {
+									setShowGlobalModal(false);
+									setPublishFeedback(null);
+								}}
+								className="absolute top-3 right-3 p-1 rounded-badge text-text-muted hover:text-text-primary border border-border hover:border-text-muted cursor-pointer"
+							>
+								<HugeiconsIcon icon={Cancel01Icon} size={14} />
+							</button>
+
+							<div className="flex items-center gap-2 mb-2 text-primary">
+								<HugeiconsIcon icon={Globe02Icon} size={20} />
+								<h4 className="font-heading font-bold text-sm text-text-primary">
+									Set Global Default Theme
+								</h4>
+							</div>
+							<p
+								className="text-xs mb-4 leading-relaxed"
+								style={{ color: tokens.textMuted }}
+							>
+								Save your active theme settings as the global default for all
+								visitors. Enter the admin password to confirm.
+							</p>
+
+							<form onSubmit={handlePublishGlobalTheme} className="space-y-3">
+								<div className="relative">
+									<input
+										type={showAdminPassword ? "text" : "password"}
+										value={adminPassword}
+										onChange={(e) => setAdminPassword(e.target.value)}
+										placeholder="Enter admin password..."
+										className="w-full px-3 py-2 pr-10 text-xs rounded-btn bg-canvas border border-border text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary font-mono"
+										style={{
+											backgroundColor: tokens.canvas,
+											borderColor: tokens.border,
+											color: tokens.textPrimary,
+										}}
+										required
+									/>
+									<button
+										type="button"
+										onClick={() => setShowAdminPassword(!showAdminPassword)}
+										className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary cursor-pointer"
+									>
+										<HugeiconsIcon
+											icon={showAdminPassword ? ViewOffIcon : ViewIcon}
+											size={14}
+										/>
+									</button>
+								</div>
+
+								{publishFeedback && (
+									<div
+										className={`p-2.5 rounded-btn text-xs border ${
+											publishFeedback.type === "success"
+												? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+												: "bg-red-500/10 border-red-500/30 text-red-400"
+										}`}
+									>
+										{publishFeedback.message}
+									</div>
+								)}
+
+								<div className="flex items-center justify-end gap-2 pt-2">
+									<button
+										type="button"
+										onClick={() => {
+											setShowGlobalModal(false);
+											setPublishFeedback(null);
+										}}
+										className="px-3 py-1.5 rounded-btn text-xs border border-border text-text-muted hover:bg-card cursor-pointer"
+									>
+										Cancel
+									</button>
+									<button
+										type="submit"
+										disabled={isPublishing}
+										className="px-4 py-1.5 rounded-btn text-xs font-bold font-heading text-canvas transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+										style={{ backgroundColor: tokens.primary }}
+									>
+										{isPublishing ? "Saving..." : "Confirm & Deploy"}
+									</button>
+								</div>
+							</form>
+						</div>
+					</div>
+				)}
 			</div>
 		</div>
 	);

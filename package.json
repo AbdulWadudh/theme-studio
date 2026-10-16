@@ -65,5 +65,10 @@
 	"bin": {
 		"theme-studio": "./dist/cli.mjs",
 		"@k79/theme-studio": "./dist/cli.mjs"
+	},
+	"dependencies": {
+		"@hugeicons/core-free-icons": "^4.3.5",
+		"@hugeicons/react": "^1.1.10",
+		"@orshot/colorshot": "^0.2.0"
 	}
 }

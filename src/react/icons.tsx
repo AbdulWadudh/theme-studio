@@ -81,6 +81,66 @@ export const SwatchIcon = ({
 	</svg>
 );
 
+export const RotateLeft01Icon = ({
+	color = "currentColor",
+	stroke = "currentColor",
+	...props
+}: React.SVGProps<SVGSVGElement>) => (
+	<svg
+		xmlns="http://www.w3.org/2000/svg"
+		viewBox="0 0 24 24"
+		width={16}
+		height={16}
+		fill="none"
+		color={color}
+		{...props}
+	>
+		<path
+			d="M4.04895 10.5C4.78018 6.45288 8.32839 3.375 12.5854 3.375C17.3807 3.375 21.2708 7.26514 21.2708 12.0604C21.2708 16.8557 17.3807 20.7458 12.5854 20.7458C8.80287 20.7458 5.56846 18.321 4.3822 14.8875"
+			stroke={stroke}
+			strokeWidth="1.5"
+			strokeLinecap="round"
+		/>
+		<path
+			d="M4.5 5.5V10.5H9.5"
+			stroke={stroke}
+			strokeWidth="1.5"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		/>
+	</svg>
+);
+
+export const Globe02Icon = ({
+	color = "currentColor",
+	stroke = "currentColor",
+	...props
+}: React.SVGProps<SVGSVGElement>) => (
+	<svg
+		xmlns="http://www.w3.org/2000/svg"
+		viewBox="0 0 24 24"
+		width={16}
+		height={16}
+		fill="none"
+		color={color}
+		{...props}
+	>
+		<circle cx="12" cy="12" r="10" stroke={stroke} strokeWidth="1.5" />
+		<path
+			d="M8 3C8 3 5 7.5 5 12C5 16.5 8 21 8 21M16 3C16 3 19 7.5 19 12C19 16.5 16 21 16 21"
+			stroke={stroke}
+			strokeWidth="1.5"
+			strokeLinecap="round"
+		/>
+		<path
+			d="M2.5 9H21.5M2.5 15H21.5"
+			stroke={stroke}
+			strokeWidth="1.5"
+			strokeLinecap="round"
+		/>
+	</svg>
+);
+
 export const Setup01Icon = ({
 	color = "currentColor",
 	stroke = "currentColor",

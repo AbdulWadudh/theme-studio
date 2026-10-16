@@ -15,6 +15,7 @@ export const TAILWIND_V4_TOKEN_MAP = {
 	shadow: "--shadow",
 	shadowSm: "--shadow-sm",
 	shadowLg: "--shadow-lg",
+	glowColor: "--glow-color",
 	fontHeading: "--font-heading",
 	fontBody: "--font-body",
 } as const;
@@ -39,6 +40,9 @@ export function generateTailwindV4ThemeBlock(): string {
   --shadow-lg: var(--shadow-lg);
   --shadow-shadow: var(--shadow);
 
+  --glow-color: var(--glow-color, #38bdf8);
+  --color-glow: var(--glow-color, #38bdf8);
+
   --spacing-boxShadowX: 4px;
   --spacing-boxShadowY: 4px;
   --spacing-reverseBoxShadowX: -4px;
@@ -60,6 +64,45 @@ export function generateTailwindV4ThemeBlock(): string {
 }
 
 /**
+ * Neobrutalist tactile physics CSS rules
+ * Provides 2px hover displacement and 4px active press click physics.
+ */
+export const TACTILE_CSS_RULES = `
+/* Tactile Neobrutalism on-hover and active physics */
+.tactile-always-active,
+[data-tactile="true"] button:not(:disabled):not([data-no-tactile]),
+[data-tactile="true"] [role="button"]:not([data-no-tactile]),
+[data-tactile="true"] .tactile-item {
+	box-shadow: 4px 4px 0px 0px #000000 !important;
+	border-color: #000000 !important;
+	border-width: 2px !important;
+	transition:
+		transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
+		box-shadow 120ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.tactile-always-active:hover,
+[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):hover,
+[data-tactile="true"] [role="button"]:not([data-no-tactile]):hover,
+[data-tactile="true"] .tactile-item:hover {
+	transform: translate(2px, 2px) !important;
+	box-shadow: 2px 2px 0px 0px #000000 !important;
+}
+
+.tactile-always-active:active,
+[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):active,
+[data-tactile="true"] [role="button"]:not([data-no-tactile]):active,
+[data-tactile="true"] .tactile-item:active {
+	transform: translate(4px, 4px) !important;
+	box-shadow: 0px 0px 0px 0px #000000 !important;
+}
+`;
+
+export function generateTactileCss(): string {
+	return TACTILE_CSS_RULES;
+}
+
+/**
  * Tailwind CSS v3 Theme Configuration Extension
  * Use in tailwind.config.js / tailwind.config.ts:
  * theme: { extend: themeStudioTailwindV3Extension }
@@ -76,6 +119,7 @@ export const themeStudioTailwindV3Extension = {
 		success: "var(--success)",
 		danger: "var(--danger)",
 		warning: "var(--warning)",
+		glow: "var(--glow-color, #38bdf8)",
 		"text-primary": "var(--text-primary)",
 		"text-muted": "var(--text-muted)",
 	},

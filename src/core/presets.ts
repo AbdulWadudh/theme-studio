@@ -1,4 +1,137 @@
-import type { BaseTokens, ThemeDefinition } from "./types";
+import type {
+	BaseTokens,
+	GlowColorChip,
+	ShadowPresetItem,
+	ThemeDefinition,
+} from "./types";
+
+export function hexToRgba(hex: string, alpha: number): string {
+	let c = (hex || "#38BDF8").replace("#", "").trim();
+	if (c.length === 3) {
+		c = c
+			.split("")
+			.map((x) => x + x)
+			.join("");
+	}
+	const num = parseInt(c, 16);
+	if (Number.isNaN(num) || c.length !== 6) {
+		return `rgba(56, 189, 248, ${alpha})`;
+	}
+	const r = (num >> 16) & 255;
+	const g = (num >> 8) & 255;
+	const b = num & 255;
+	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+export function getGlowValues(colorHex: string) {
+	const c1 = hexToRgba(colorHex, 0.45);
+	const c2 = hexToRgba(colorHex, 0.2);
+	const c3 = hexToRgba(colorHex, 0.65);
+	const c4 = hexToRgba(colorHex, 0.3);
+	return {
+		value: `0 0 20px ${c1}, 0 0 40px ${c2}`,
+		sm: `0 0 10px ${c1}`,
+		lg: `0 0 35px ${c3}, 0 0 70px ${c4}`,
+	};
+}
+
+export const DEFINED_RADIUS_OPTIONS = [
+	"0rem",
+	"0.25rem",
+	"0.5rem",
+	"0.625rem",
+	"0.75rem",
+	"1.25rem",
+] as const;
+
+export const SHADOW_PRESETS: ShadowPresetItem[] = [
+	{
+		id: "none",
+		label: "None",
+		value: "none",
+		sm: "none",
+		lg: "none",
+	},
+	{
+		id: "neobrutalist",
+		label: "Neobrutalist (Hard)",
+		value: "4px 4px 0px 0px #000000",
+		sm: "2px 2px 0px 0px #000000",
+		lg: "6px 6px 0px 0px #000000",
+	},
+	{
+		id: "subtle",
+		label: "Subtle",
+		value:
+			"0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04)",
+		sm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+		lg: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05)",
+	},
+	{
+		id: "natural",
+		label: "Natural",
+		value:
+			"0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+		sm: "0 1px 2px 0 rgba(0, 0, 0, 0.1)",
+		lg: "0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.15)",
+	},
+	{
+		id: "deep-3d",
+		label: "Deep 3D",
+		value:
+			"0 16px 24px -4px rgba(0, 0, 0, 0.25), 0 6px 12px -3px rgba(0, 0, 0, 0.2)",
+		sm: "0 2px 4px 0 rgba(0, 0, 0, 0.2)",
+		lg: "0 24px 38px -6px rgba(0, 0, 0, 0.35), 0 10px 16px -4px rgba(0, 0, 0, 0.25)",
+	},
+	{
+		id: "neon-glow",
+		label: "Neon Glow",
+		value:
+			"0 0 20px rgba(56, 189, 248, 0.45), 0 0 40px rgba(56, 189, 248, 0.2)",
+		sm: "0 0 10px rgba(56, 189, 248, 0.45)",
+		lg: "0 0 35px rgba(56, 189, 248, 0.65), 0 0 70px rgba(56, 189, 248, 0.3)",
+		isGlow: true,
+	},
+];
+
+export const GLOW_COLOR_CHIPS: GlowColorChip[] = [
+	{
+		label: "Theme Primary",
+		color: "primary",
+	},
+	{
+		label: "Theme Accent",
+		color: "accent",
+	},
+	{
+		label: "Sky Blue",
+		color: "#38BDF8",
+	},
+	{
+		label: "Cyan",
+		color: "#00F2FF",
+	},
+	{
+		label: "Emerald",
+		color: "#10B981",
+	},
+	{
+		label: "Violet",
+		color: "#A855F7",
+	},
+	{
+		label: "Hot Pink",
+		color: "#EC4899",
+	},
+	{
+		label: "Gold",
+		color: "#F59E0B",
+	},
+	{
+		label: "Crimson",
+		color: "#EF4444",
+	},
+];
 
 const defaultShadows = {
 	dark: {
@@ -37,6 +170,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#F8FAFC",
 			textMuted: "#94A3B8",
 			radius: "0.625rem",
+			glowColor: "#38BDF8",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 		lightTokens: {
@@ -52,6 +187,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#D97706",
 			textPrimary: "#0F172A",
 			textMuted: "#64748B",
+			glowColor: "#0284C7",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 	},
@@ -74,6 +211,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#0F172A",
 			textMuted: "#64748B",
 			radius: "0.5rem",
+			glowColor: "#4F46E5",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 		darkTokens: {
@@ -89,6 +228,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#F59E0B",
 			textPrimary: "#F8FAFC",
 			textMuted: "#94A3B8",
+			glowColor: "#6366F1",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 	},
@@ -110,7 +251,13 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#FAF5FF",
 			textMuted: "#A1A1AA",
 			radius: "0.5rem",
-			...defaultShadows.dark,
+			glowColor: "#A855F7",
+			shadow:
+				"0 0 20px rgba(168, 85, 247, 0.45), 0 0 40px rgba(168, 85, 247, 0.2)",
+			shadowSm: "0 0 10px rgba(168, 85, 247, 0.45)",
+			shadowLg:
+				"0 0 35px rgba(168, 85, 247, 0.65), 0 0 70px rgba(168, 85, 247, 0.3)",
+			tactile: "false",
 		},
 		lightTokens: {
 			canvas: "#FAF8FF",
@@ -125,6 +272,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#D97706",
 			textPrimary: "#1E1B4B",
 			textMuted: "#6B7280",
+			glowColor: "#9333EA",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 	},
@@ -146,6 +295,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#ECFDF5",
 			textMuted: "#6EE7B7",
 			radius: "0.375rem",
+			glowColor: "#10B981",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 		lightTokens: {
@@ -161,6 +312,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#D97706",
 			textPrimary: "#064E3B",
 			textMuted: "#047857",
+			glowColor: "#059669",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 	},
@@ -182,6 +335,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#F0F9FF",
 			textMuted: "#7DD3FC",
 			radius: "0.75rem",
+			glowColor: "#38BDF8",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 		lightTokens: {
@@ -197,6 +352,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#D97706",
 			textPrimary: "#0C4A6E",
 			textMuted: "#0369A1",
+			glowColor: "#0284C7",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 	},
@@ -224,6 +381,7 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			shadow: "4px 4px 0px 0px #000000",
 			shadowSm: "2px 2px 0px 0px #000000",
 			shadowLg: "6px 6px 0px 0px #000000",
+			glowColor: "#3B82F6",
 			tactile: "true",
 		},
 		lightTokens: {
@@ -245,6 +403,7 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			shadow: "4px 4px 0px 0px #000000",
 			shadowSm: "2px 2px 0px 0px #000000",
 			shadowLg: "6px 6px 0px 0px #000000",
+			glowColor: "#2563EB",
 			tactile: "true",
 		},
 	},
@@ -266,6 +425,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#E8EEF9",
 			textMuted: "#64748B",
 			radius: "1.125rem",
+			glowColor: "#3B82F6",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 		lightTokens: {
@@ -281,6 +442,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#D97706",
 			textPrimary: "#0F172A",
 			textMuted: "#475569",
+			glowColor: "#2563EB",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 	},
@@ -302,6 +465,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#F7EDE6",
 			textMuted: "#7A6A61",
 			radius: "1rem",
+			glowColor: "#F2542D",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 		lightTokens: {
@@ -317,6 +482,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#D97706",
 			textPrimary: "#431407",
 			textMuted: "#7C2D12",
+			glowColor: "#EA580C",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 	},
@@ -338,6 +505,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#E9F5EC",
 			textMuted: "#66806F",
 			radius: "0.875rem",
+			glowColor: "#4ADE80",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 		lightTokens: {
@@ -353,6 +522,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#D97706",
 			textPrimary: "#064E3B",
 			textMuted: "#047857",
+			glowColor: "#16A34A",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 	},
@@ -374,6 +545,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#F1EAFF",
 			textMuted: "#7A6B9C",
 			radius: "1.5rem",
+			glowColor: "#A855F7",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 		lightTokens: {
@@ -389,6 +562,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#D97706",
 			textPrimary: "#3B0764",
 			textMuted: "#6B21A8",
+			glowColor: "#9333EA",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 	},
@@ -410,6 +585,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#FEF6E4",
 			textMuted: "#85775A",
 			radius: "0.75rem",
+			glowColor: "#F59E0B",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 		lightTokens: {
@@ -425,6 +602,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#D97706",
 			textPrimary: "#451A03",
 			textMuted: "#78350F",
+			glowColor: "#D97706",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 	},
@@ -446,6 +625,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#ECF3F7",
 			textMuted: "#667C8A",
 			radius: "0.625rem",
+			glowColor: "#38BDF8",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 		lightTokens: {
@@ -461,6 +642,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#D97706",
 			textPrimary: "#0C4A6E",
 			textMuted: "#0369A1",
+			glowColor: "#0284C7",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 	},
@@ -482,6 +665,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#FCEEF3",
 			textMuted: "#8E7280",
 			radius: "1.625rem",
+			glowColor: "#FB7185",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 		lightTokens: {
@@ -497,6 +682,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#D97706",
 			textPrimary: "#4C0519",
 			textMuted: "#881337",
+			glowColor: "#E11D48",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 	},
@@ -518,6 +705,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#C8F7C5",
 			textMuted: "#3F7A48",
 			radius: "0.125rem",
+			glowColor: "#22C55E",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 		lightTokens: {
@@ -533,6 +722,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#D97706",
 			textPrimary: "#052E16",
 			textMuted: "#14532D",
+			glowColor: "#15803D",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 	},
@@ -554,6 +745,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#F0E9D8",
 			textMuted: "#7E7563",
 			radius: "0.5rem",
+			glowColor: "#C89B3C",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 		lightTokens: {
@@ -569,6 +762,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			warning: "#D97706",
 			textPrimary: "#292524",
 			textMuted: "#57534E",
+			glowColor: "#A16207",
+			tactile: "false",
 			...defaultShadows.light,
 		},
 	},
@@ -591,10 +786,12 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#FAF5FF",
 			textMuted: "#A855F7",
 			radius: "0.25rem",
+			glowColor: "#EC4899",
 			shadow:
 				"0 0 20px rgba(236, 72, 153, 0.25), 0 4px 6px -4px rgba(0, 0, 0, 0.5)",
 			shadowSm: "0 0 10px rgba(236, 72, 153, 0.2)",
 			shadowLg: "0 0 30px rgba(236, 72, 153, 0.4)",
+			tactile: "false",
 		},
 	},
 	{
@@ -615,6 +812,8 @@ export const defaultPresets: ThemeDefinition<BaseTokens>[] = [
 			textPrimary: "#ECEFF4",
 			textMuted: "#D8DEE9",
 			radius: "0.75rem",
+			glowColor: "#88C0D0",
+			tactile: "false",
 			...defaultShadows.dark,
 		},
 	},

@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { defaultPresets } from "../src/core/presets";
+import {
+	DEFINED_RADIUS_OPTIONS,
+	defaultPresets,
+	GLOW_COLOR_CHIPS,
+	getGlowValues,
+	hexToRgba,
+	SHADOW_PRESETS,
+} from "../src/core/presets";
 import {
 	safeJsonSerialize,
 	safeMergeTokens,
@@ -8,6 +15,7 @@ import {
 import { computeTokenDelta, resolveActiveTokens } from "../src/core/tokens";
 import { getSsrThemeState, parseThemeCookie } from "../src/server/cookie";
 import { createMemoryStorage } from "../src/storage/memory";
+import { generateTactileCss, TACTILE_CSS_RULES } from "../src/tailwind/bridge";
 
 describe("@k79/theme-studio security & sanitization", () => {
 	test("blocks dangerous CSS injections with semicolons and braces", () => {
@@ -105,6 +113,48 @@ describe("@k79/theme-studio token delta & SSR hydration", () => {
 		const mem = createMemoryStorage();
 		mem.setItem("k79_theme_state", "test_val");
 		expect(mem.getItem("k79_theme_state")).toBe("test_val");
+	});
+});
+
+describe("@k79/theme-studio tactile physics, shadows & glow controls", () => {
+	test("exports hexToRgba and generates valid rgba values", () => {
+		expect(hexToRgba("#38BDF8", 0.5)).toBe("rgba(56, 189, 248, 0.5)");
+		expect(hexToRgba("#000", 1)).toBe("rgba(0, 0, 0, 1)");
+	});
+
+	test("exports getGlowValues and returns multi-layer neon glow values", () => {
+		const glow = getGlowValues("#38BDF8");
+		expect(glow.value).toContain("0 0 20px");
+		expect(glow.value).toContain("0 0 40px");
+		expect(glow.sm).toContain("0 0 10px");
+		expect(glow.lg).toContain("0 0 35px");
+		expect(glow.lg).toContain("0 0 70px");
+	});
+
+	test("exports shadow presets and glow color chips", () => {
+		expect(SHADOW_PRESETS.length).toBeGreaterThanOrEqual(6);
+		expect(SHADOW_PRESETS.some((p) => p.id === "neobrutalist")).toBe(true);
+		expect(SHADOW_PRESETS.some((p) => p.id === "neon-glow")).toBe(true);
+		expect(GLOW_COLOR_CHIPS.length).toBeGreaterThanOrEqual(9);
+	});
+
+	test("exports 6 defined radius options including 0.625rem", () => {
+		expect(DEFINED_RADIUS_OPTIONS).toContain("0.625rem");
+		expect(DEFINED_RADIUS_OPTIONS).toHaveLength(6);
+	});
+
+	test("exports tactile physics CSS rules and generator function", () => {
+		expect(TACTILE_CSS_RULES).toContain(".tactile-always-active");
+		expect(TACTILE_CSS_RULES).toContain('[data-tactile="true"]');
+		expect(TACTILE_CSS_RULES).toContain("translate(2px, 2px)");
+		expect(TACTILE_CSS_RULES).toContain("translate(4px, 4px)");
+		expect(generateTactileCss()).toBe(TACTILE_CSS_RULES);
+	});
+
+	test("supports tactile token in neobrutalism preset", () => {
+		const neobrutal = defaultPresets.find((p) => p.id === "neobrutalism");
+		expect(neobrutal).toBeDefined();
+		expect(neobrutal?.tokens.tactile).toBe("true");
 	});
 });
 

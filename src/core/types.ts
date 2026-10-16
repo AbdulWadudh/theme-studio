@@ -20,9 +20,25 @@ export interface BaseTokens {
 	shadow?: string;
 	shadowSm?: string;
 	shadowLg?: string;
+	glowColor?: string;
+	tactile?: "true" | "false" | string;
 	fontHeading?: string;
 	fontBody?: string;
 	[key: string]: string | undefined;
+}
+
+export interface ShadowPresetItem {
+	id: string;
+	label: string;
+	value: string;
+	sm: string;
+	lg: string;
+	isGlow?: boolean;
+}
+
+export interface GlowColorChip {
+	label: string;
+	color: string;
 }
 
 export interface ThemeDefinition<T extends BaseTokens = BaseTokens> {
