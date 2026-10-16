@@ -83,6 +83,8 @@ export interface ThemeContextValue<T extends BaseTokens = BaseTokens> {
 	setCustomTokens: (tokens: Partial<T>) => void;
 	resetTheme: () => void;
 	registerTheme: (theme: ThemeDefinition<T>) => void;
+	tactile?: boolean;
+	setTactile?: (enabled: boolean) => void;
 }
 
 export interface ZenithPlugin<T extends BaseTokens = BaseTokens> {

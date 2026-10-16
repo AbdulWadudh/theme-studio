@@ -1,4 +1,5 @@
 import { safeJsonSerialize } from "../core/sanitize";
+import { TACTILE_CSS_RULES } from "../core/tactile";
 
 export interface ThemeScriptProps {
 	storageKey?: string;
@@ -13,9 +14,14 @@ export function ThemeScript({
 	defaultThemeId = "dark-slate",
 	nonce,
 }: ThemeScriptProps) {
+	const noTransitionsCss =
+		"html.no-transitions,html.no-transitions *,html.no-transitions *:before,html.no-transitions *:after,html[data-tactile='true'].no-transitions button,html[data-tactile='true'].no-transitions [role='button']{-webkit-transition:none!important;-moz-transition:none!important;-o-transition:none!important;-ms-transition:none!important;transition:none!important;animation:none!important;}";
+
+	const combinedInitialCss = `${noTransitionsCss}\n${TACTILE_CSS_RULES}`;
+
 	const code = `(function(){try{
     var d=document.documentElement;
-    var rawCookie=document.cookie.match(new RegExp('(^|;\\\\s*)('+${safeJsonSerialize(storageKey)}+')=([^;]*)'));
+    var rawCookie=document.cookie.match(new RegExp('(^|;\\\\\\\\s*)('+${safeJsonSerialize(storageKey)}+')=([^;]*)'));
     var rawLocal=null;
     try{rawLocal=localStorage.getItem(${safeJsonSerialize(storageKey)})}catch(e){}
     var data=null;
@@ -37,10 +43,10 @@ export function ThemeScript({
       if(data&&data.d&&data.d.fontBody) fontsToCheck.push(data.d.fontBody);
       if(activeId==="neobrutalism"){fontsToCheck.push("Space Grotesk");fontsToCheck.push("Inter");}
       for(var i=0; i<fontsToCheck.length; i++){
-        var cleanFam = fontsToCheck[i].split(",")[0].trim().replace(/['"]/g, "");
+        var cleanFam = fontsToCheck[i].replace(/^var\\(--font-/, "").replace(/\\).*$/, "").split(",")[0].trim().replace(/['"]/g, "");
         var fSlug = cleanFam.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
         var cached = localStorage.getItem("k79_font_css_" + fSlug);
-        if(cached && !document.querySelector("[data-k79-font="" + fSlug + ""]")){
+        if(cached && !document.querySelector("[data-k79-font=\\\"" + fSlug + "\\\"]")){
           var st = document.createElement("style");
           st.setAttribute("data-k79-font", fSlug);
           st.textContent = cached;
@@ -62,10 +68,17 @@ export function ThemeScript({
   }catch(e){}})();`;
 
 	return (
-		<script
-			id="k79-theme-script"
-			nonce={nonce}
-			dangerouslySetInnerHTML={{ __html: code }}
-		/>
+		<>
+			<style
+				id="k79-no-fouc"
+				nonce={nonce}
+				dangerouslySetInnerHTML={{ __html: combinedInitialCss }}
+			/>
+			<script
+				id="k79-theme-script"
+				nonce={nonce}
+				dangerouslySetInnerHTML={{ __html: code }}
+			/>
+		</>
 	);
 }

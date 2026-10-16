@@ -16,6 +16,30 @@ export function tokensToCssVars(
 	if (tokens.radius && !vars["--radius-card"]) {
 		vars["--radius-card"] = sanitizeCssValue(tokens.radius) || tokens.radius;
 	}
+
+	// Automatic fallback bridge for font variable references
+	const allFontRefs = `${vars["--font-heading"] || ""} ${vars["--font-body"] || ""}`;
+	if (allFontRefs.includes("jetbrains")) {
+		vars["--font-jetbrains-mono"] =
+			"'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+	}
+	if (allFontRefs.includes("ibm-plex")) {
+		vars["--font-ibm-plex"] =
+			"'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+	}
+	if (allFontRefs.includes("noto-sans")) {
+		vars["--font-noto-sans"] =
+			"'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+	}
+	if (allFontRefs.includes("inter")) {
+		vars["--font-inter"] =
+			"'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+	}
+	if (allFontRefs.includes("space-grotesk")) {
+		vars["--font-space-grotesk"] =
+			"'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+	}
+
 	return vars;
 }
 

@@ -241,71 +241,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 	console.log("✔ Reset test-matrix/vite-react-tw4 with full showcase");
 }
 
-// =============================================================
-// 4. React 17 + Tailwind v3 (Vite)
-// =============================================================
-const r17Dir = path.join(matrixDir, "react-17-tailwind-v3");
-if (fs.existsSync(r17Dir)) {
-	ensureSymlink(r17Dir);
-	removeIfExists(path.join(r17Dir, ".theme-studio"));
-	removeIfExists(path.join(r17Dir, "src/main.tsx.bak"));
-	removeIfExists(path.join(r17Dir, "src/index.css.bak"));
-
-	fs.writeFileSync(
-		path.join(r17Dir, "tailwind.config.js"),
-		`export default {
-  darkMode: ["class"],
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
-  theme: {
-    extend: {
-      colors: ${JSON.stringify(tailwindV3Colors, null, 8)},
-      borderRadius: ${JSON.stringify(tailwindV3BorderRadius, null, 8)},
-    },
-  },
-  plugins: [],
-};
-`,
-		"utf8",
-	);
-
-	fs.writeFileSync(
-		path.join(r17Dir, "src/index.css"),
-		`@tailwind base;
-@tailwind components;
-@tailwind utilities;
-`,
-		"utf8",
-	);
-
-	fs.writeFileSync(
-		path.join(r17Dir, "src/main.tsx"),
-		`import React from "react";
-import ReactDOM from "react-dom";
-import Showcase from "./App";
-import "./index.css";
-
-ReactDOM.render(
-  <React.StrictMode>
-    <Showcase />
-  </React.StrictMode>,
-  document.getElementById("root"),
-);
-`,
-		"utf8",
-	);
-
-	fs.writeFileSync(
-		path.join(r17Dir, "src/App.tsx"),
-		getShowcase("React 17 + Tailwind v3"),
-		"utf8",
-	);
-
-	console.log("✔ Reset test-matrix/react-17-tailwind-v3 with full showcase");
-}
-
 console.log("\n============================================================");
 console.log(
-	"✨ All 4 test-matrix environments successfully reset with full showcases!",
+	"✨ All 3 test-matrix environments successfully reset with full showcases!",
 );
 console.log("You can now test running CLI init in any of them:");
 console.log(
@@ -318,6 +256,5 @@ console.log(
 	"  cd test-matrix/vite-react-tw4 && bun run ../../bin/cli.cjs init",
 );
 console.log(
-	"  cd test-matrix/react-17-tailwind-v3 && bun run ../../bin/cli.cjs init",
 );
 console.log("============================================================\n");

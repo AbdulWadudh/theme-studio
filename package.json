@@ -43,12 +43,11 @@
 		"dev:vite": "bun --cwd test-matrix/vite-react-tw4 dev",
 		"matrix:reset": "node scripts/reset-matrix.mjs",
 		"reset:matrix": "node scripts/reset-matrix.mjs",
-		"dev:react17": "bun --cwd test-matrix/react-17-tailwind-v3 dev",
 		"release": "bun scripts/release.ts"
 	},
 	"peerDependencies": {
-		"react": ">=16.8.0",
-		"react-dom": ">=16.8.0"
+		"react": "^18.0.0 || ^19.0.0",
+		"react-dom": "^18.0.0 || ^19.0.0"
 	},
 	"devDependencies": {
 		"@clack/prompts": "^1.8.1",

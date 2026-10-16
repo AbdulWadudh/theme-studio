@@ -198,34 +198,6 @@ export function ThemeStudioDrawer() {
 			const style = document.createElement("style");
 			style.id = id;
 			style.textContent = `
-.tactile-always-active,
-[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):not([data-colorshot-field]),
-[data-tactile="true"] [role="button"]:not([data-no-tactile]):not([data-colorshot-field]),
-[data-tactile="true"] .tactile-item {
-	box-shadow: 4px 4px 0px 0px #000000 !important;
-	border-color: #000000 !important;
-	border-width: 2px !important;
-	transition:
-		transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
-		box-shadow 120ms cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-.tactile-always-active:hover,
-[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):not([data-colorshot-field]):hover,
-[data-tactile="true"] [role="button"]:not([data-no-tactile]):not([data-colorshot-field]):hover,
-[data-tactile="true"] .tactile-item:hover {
-	transform: translate(2px, 2px) !important;
-	box-shadow: 2px 2px 0px 0px #000000 !important;
-}
-
-.tactile-always-active:active,
-[data-tactile="true"] button:not(:disabled):not([data-no-tactile]):not([data-colorshot-field]):active,
-[data-tactile="true"] [role="button"]:not([data-no-tactile]):not([data-colorshot-field]):active,
-[data-tactile="true"] .tactile-item:active {
-	transform: translate(4px, 4px) !important;
-	box-shadow: 0px 0px 0px 0px #000000 !important;
-}
-
 /* Ensure Colorshot popover displays above high z-index drawers/modals */
 body [data-colorshot-popover],
 [data-colorshot-popover] {
@@ -622,9 +594,7 @@ button[data-colorshot-field],
 							}}
 						>
 							{themes
-								.filter(
-									(p: ThemeDefinition<BaseTokens>) => p.id !== "light-clean",
-								)
+								
 								.map((p: ThemeDefinition<BaseTokens>) => {
 									const isSelected = theme === p.id;
 									const previewColors =

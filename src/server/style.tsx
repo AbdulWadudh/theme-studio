@@ -1,4 +1,5 @@
 import { extractFontFamily, toFontsourceSlug } from "../core/fonts";
+import { TACTILE_CSS_RULES } from "../core/tactile";
 import { tokensToCssString } from "../core/tokens";
 import type { BaseTokens } from "../core/types";
 import type { SsrThemeState } from "./cookie";
@@ -10,7 +11,8 @@ export function ZenithThemeStyle<T extends BaseTokens = BaseTokens>({
 	themeState: SsrThemeState<T>;
 	nonce?: string;
 }) {
-	const css = `:root{${tokensToCssString(themeState.activeTokens)}}`;
+	const tokenRules = tokensToCssString(themeState.activeTokens);
+	const css = `:root,html,html.light,html.dark,[data-theme]{${tokenRules}}html,body{background-color:var(--canvas);color:var(--text-primary);font-family:var(--font-body,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif);}${TACTILE_CSS_RULES}`;
 
 	const fontUrls: string[] = [];
 	const headingFamily = extractFontFamily(themeState.activeTokens.fontHeading);

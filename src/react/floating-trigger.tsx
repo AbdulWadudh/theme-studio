@@ -38,13 +38,16 @@ export function FloatingStudioTrigger({ config }: FloatingStudioTriggerProps) {
 	return (
 		<button
 			type="button"
+			data-no-tactile="true"
 			onClick={openStudio}
 			aria-label={config?.triggerAriaLabel || "Open Theme Studio"}
 			title="Theme Studio"
+			className={`group no-tactile ${config?.className || ""}`}
 			style={{
 				...stylePosition,
 				width: "44px",
 				height: "44px",
+				minWidth: "44px",
 				borderRadius: "50%",
 				display: "flex",
 				alignItems: "center",
@@ -60,8 +63,8 @@ export function FloatingStudioTrigger({ config }: FloatingStudioTriggerProps) {
 				backdropFilter: "blur(12px)",
 				WebkitBackdropFilter: "blur(12px)",
 				transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+				outline: "none",
 			}}
-			className={`group ${config?.className || ""}`}
 			onMouseEnter={(e) => {
 				e.currentTarget.style.transform = "scale(1.1) translateY(-2px)";
 				e.currentTarget.style.boxShadow =

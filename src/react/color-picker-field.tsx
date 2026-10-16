@@ -2,7 +2,7 @@
 
 import "@orshot/colorshot/styles.css";
 import { ColorField } from "@orshot/colorshot/react";
-import { useEffect } from "react";
+import React, { Component, type ErrorInfo, type ReactNode, useEffect } from "react";
 
 export interface ColorPickerFieldProps {
 	value: string;
@@ -75,6 +75,21 @@ body [data-colorshot-popover],
 }
 `;
 
+class SafeColorPickerBoundary extends Component<
+	{ children: ReactNode; fallback: ReactNode },
+	{ hasError: boolean }
+> {
+	state = { hasError: false };
+	static getDerivedStateFromError() {
+		return { hasError: true };
+	}
+	componentDidCatch(_error: Error, _info: ErrorInfo) {}
+	render() {
+		if (this.state.hasError) return this.props.fallback;
+		return this.props.children;
+	}
+}
+
 export function ColorPickerField({
 	value,
 	onChange,
@@ -97,55 +112,94 @@ export function ColorPickerField({
 	const triggerSize = size === "sm" ? "w-5 h-5" : "w-7 h-7";
 	const pxSize = size === "sm" ? "20px" : "28px";
 
-	return (
-		<ColorField
-			value={value || "#38BDF8"}
-			onChange={onChange}
-			onChangeComplete={onChangeComplete || onChange}
-			modes={["solid", "linear", "radial", "conic"]}
-			alpha={true}
-			eyeDropper={true}
-			swatchSearch={true}
-			gradientPresets={true}
-			data-no-tactile="true"
-			className="!inline-flex !items-center !justify-center !p-0 !min-w-0 !border-0 !bg-transparent !shadow-none !h-auto cursor-pointer"
+	const fallbackInput = (
+		<label
+			className={`inline-block ${triggerSize} rounded-md border border-border/80 shrink-0 shadow-xs transition-transform hover:scale-105 cursor-pointer relative ${className}`}
 			style={{
-				background: "transparent",
-				backgroundColor: "transparent",
-				border: "none",
-				padding: 0,
-				margin: 0,
-				height: "auto",
-				minHeight: 0,
-				minWidth: 0,
-				boxShadow: "none",
-				outline: "none",
-				display: "inline-flex",
-				alignItems: "center",
-				justifyContent: "center",
-				cursor: "pointer",
+				width: pxSize,
+				height: pxSize,
+				borderRadius: "6px",
+				background: value || "#38BDF8",
+				display: "inline-block",
+				flexShrink: 0,
+				boxSizing: "border-box",
 			}}
-			swatches={[
-				{ id: "gradients", label: "Gradients", colors: "default" },
-				{ id: "brand", label: "Brand", colors: BRAND_PALETTE },
-				{ id: "recent", label: "Recent", recent: true },
-			]}
-			renderTrigger={({ value: currVal }) => (
-				<span
-					className={`inline-block ${triggerSize} rounded-md border border-border/80 shrink-0 shadow-xs transition-transform hover:scale-105 ${className}`}
-					style={{
-						width: pxSize,
-						height: pxSize,
-						borderRadius: "6px",
-						background: currVal || value || "#38BDF8",
-						display: "inline-block",
-						flexShrink: 0,
-						boxSizing: "border-box",
-					}}
-					title={title}
-				/>
-			)}
-		/>
+			title={title}
+		>
+			<input
+				type="color"
+				value={
+					value && value.startsWith("#") && value.length === 7
+						? value
+						: "#38BDF8"
+				}
+				onChange={(e) => {
+					onChange(e.target.value);
+					if (onChangeComplete) onChangeComplete(e.target.value);
+				}}
+				style={{
+					opacity: 0,
+					position: "absolute",
+					inset: 0,
+					width: "100%",
+					height: "100%",
+					cursor: "pointer",
+				}}
+			/>
+		</label>
+	);
+
+	return (
+		<SafeColorPickerBoundary fallback={fallbackInput}>
+			<ColorField
+				value={value || "#38BDF8"}
+				onChange={onChange}
+				onChangeComplete={onChangeComplete || onChange}
+				modes={["solid", "linear", "radial", "conic"]}
+				alpha={true}
+				eyeDropper={true}
+				swatchSearch={true}
+				gradientPresets={true}
+				data-no-tactile="true"
+				className="!inline-flex !items-center !justify-center !p-0 !min-w-0 !border-0 !bg-transparent !shadow-none !h-auto cursor-pointer"
+				style={{
+					background: "transparent",
+					backgroundColor: "transparent",
+					border: "none",
+					padding: 0,
+					margin: 0,
+					height: "auto",
+					minHeight: 0,
+					minWidth: 0,
+					boxShadow: "none",
+					outline: "none",
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					cursor: "pointer",
+				}}
+				swatches={[
+					{ id: "gradients", label: "Gradients", colors: "default" },
+					{ id: "brand", label: "Brand", colors: BRAND_PALETTE },
+					{ id: "recent", label: "Recent", recent: true },
+				]}
+				renderTrigger={({ value: currVal }) => (
+					<span
+						className={`inline-block ${triggerSize} rounded-md border border-border/80 shrink-0 shadow-xs transition-transform hover:scale-105 ${className}`}
+						style={{
+							width: pxSize,
+							height: pxSize,
+							borderRadius: "6px",
+							background: currVal || value || "#38BDF8",
+							display: "inline-block",
+							flexShrink: 0,
+							boxSizing: "border-box",
+						}}
+						title={title}
+					/>
+				)}
+			/>
+		</SafeColorPickerBoundary>
 	);
 }
 

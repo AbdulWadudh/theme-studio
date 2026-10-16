@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { extractFontFamily } from "../core/fonts";
 import { useTheme } from "./use-theme";
 
 export interface AllInOneCardProps {
@@ -34,15 +35,37 @@ export function AllInOneCard({
 	>("standard");
 	const [textInputVal, setTextInputVal] = useState("developer@antigravity.io");
 	const [selectVal, setSelectVal] = useState("production");
+	const [isSavedFeedback, setIsSavedFeedback] = useState(false);
+
+	const isCompact = activeSegment === "compact";
 
 	const theme = themeContext ? themeContext.theme : "dark-slate";
 	const resolvedMode = themeContext ? themeContext.resolvedMode : "dark";
 	const tokens = themeContext ? themeContext.tokens : null;
 	const isTactile = themeContext ? Boolean(tokens?.tactile === "true") : false;
+	const tactileBtnBorder = isTactile ? "2px solid #000000" : "1px solid transparent";
+	const tactileBtnShadow = isTactile ? "4px 4px 0px 0px #000000" : "0 1px 2px rgba(0,0,0,0.15)";
+	const subtleBtnBorder = isTactile ? "2px solid #000000" : `1px solid ${tokens?.border || "var(--border, #1e293b)"}`;
+	const subtleBtnShadow = isTactile ? "4px 4px 0px 0px #000000" : undefined;
+
+	const handleReset = () => {
+		setPrimaryCount(0);
+		setTactileClicks(0);
+		setSliderVal(72);
+		setTextInputVal("developer@antigravity.io");
+		setSelectVal("production");
+		setSwitchOn(true);
+		setCheckboxChecked(true);
+	};
+
+	const handleVerifySubmit = () => {
+		setIsSavedFeedback(true);
+		setTimeout(() => setIsSavedFeedback(false), 2000);
+	};
 
 	return (
 		<div
-			className={`rounded-2xl border border-border bg-card text-text-primary p-6 md:p-8 space-y-6 transition-all duration-200 ${className}`}
+			className={`rounded-2xl border border-border bg-card text-text-primary transition-all duration-200 ${className}`}
 			style={{
 				backgroundColor: tokens?.card || "var(--card, #162032)",
 				borderColor: tokens?.border || "var(--border, #1e293b)",
@@ -54,10 +77,110 @@ export function AllInOneCard({
 				fontFamily: tokens?.fontBody || "var(--font-body, inherit)",
 				display: "flex",
 				flexDirection: "column",
-				gap: "1.5rem",
+				padding: isCompact ? "1rem 1.25rem" : "1.75rem 2rem",
+				gap: isCompact ? "0.9rem" : "1.5rem",
 			}}
 		>
-			{/* CARD HEADER & METADATA */}
+			<style>{`
+				/* Action Buttons: Full dynamic interaction effects */
+				.aio-btn {
+					cursor: pointer;
+					position: relative;
+					user-select: none;
+					outline: none;
+					display: inline-flex;
+					align-items: center;
+					justify-content: center;
+					transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), 
+					            box-shadow 0.15s ease, 
+					            filter 0.15s ease, 
+					            background-color 0.15s ease, 
+					            border-color 0.15s ease;
+				}
+				.aio-btn:hover {
+					filter: brightness(1.12);
+					transform: translateY(-2px);
+					box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.28) !important;
+				}
+				.aio-btn:active {
+					filter: brightness(0.94);
+					transform: translateY(1px) scale(0.98);
+					box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18) !important;
+				}
+				.aio-btn-outline:hover {
+					filter: none !important;
+					background-color: var(--surface, #1e293b) !important;
+					border-color: var(--primary, #38bdf8) !important;
+					color: var(--primary, #38bdf8) !important;
+					transform: translateY(-2px);
+					box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.2) !important;
+				}
+				.aio-btn-outline:active {
+					transform: translateY(1px) scale(0.98);
+				}
+				.aio-btn-subtle:hover {
+					filter: brightness(1.15) !important;
+					border-color: var(--text-muted, #94a3b8) !important;
+					transform: translateY(-2px);
+					box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.2) !important;
+				}
+				.aio-btn-subtle:active {
+					transform: translateY(1px) scale(0.98);
+				}
+				.aio-btn-pill:hover {
+					border-color: var(--primary, #38bdf8) !important;
+					transform: translateY(-2px);
+					box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.2) !important;
+				}
+				.aio-btn-pill:active {
+					transform: translateY(1px) scale(0.98);
+				}
+				.aio-btn-tactile {
+					transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.08s ease !important;
+				}
+				.aio-btn-tactile:hover {
+					filter: none !important;
+					transform: translate(-2px, -2px) !important;
+					box-shadow: 6px 6px 0px 0px #000000 !important;
+				}
+				.aio-btn-tactile:active {
+					transform: translate(3px, 3px) !important;
+					box-shadow: 1px 1px 0px 0px #000000 !important;
+				}
+				[data-tactile="true"] .aio-btn:not([data-no-tactile]) {
+					box-shadow: 4px 4px 0px 0px #000000 !important;
+					border-color: #000000 !important;
+					border-width: 2px !important;
+				}
+				[data-tactile="true"] .aio-btn:not([data-no-tactile]):hover {
+					transform: translate(-1px, -1px) !important;
+					box-shadow: 4px 4px 0px 0px #000000 !important;
+				}
+				[data-tactile="true"] .aio-btn:not([data-no-tactile]):active {
+					transform: translate(2px, 2px) !important;
+					box-shadow: 0px 0px 0px 0px #000000 !important;
+				}
+
+				/* Segmented View Switcher Buttons (Strictly flat, never distorted by tactile physics) */
+				.aio-segment-btn {
+					cursor: pointer;
+					user-select: none;
+					outline: none;
+					border: none !important;
+					box-shadow: none !important;
+					transform: none !important;
+					transition: background-color 0.15s ease, color 0.15s ease !important;
+				}
+				.aio-segment-btn:hover,
+				.aio-segment-btn:active {
+					border: none !important;
+					box-shadow: none !important;
+					transform: none !important;
+					filter: none !important;
+				}
+			`}</style>
+
+			{/* CARD HEADER & VIEW CONTROLLER */}
 			<div
 				style={{
 					display: "flex",
@@ -66,7 +189,7 @@ export function AllInOneCard({
 					justifyContent: "space-between",
 					gap: "1rem",
 					borderBottom: `1px solid ${tokens?.border || "var(--border, #1e293b)"}`,
-					paddingBottom: "1.25rem",
+					paddingBottom: isCompact ? "0.75rem" : "1.25rem",
 					flexWrap: "wrap",
 				}}
 			>
@@ -76,7 +199,7 @@ export function AllInOneCard({
 							display: "flex",
 							alignItems: "center",
 							gap: "0.5rem",
-							marginBottom: "0.4rem",
+							marginBottom: "0.35rem",
 							flexWrap: "wrap",
 						}}
 					>
@@ -92,7 +215,7 @@ export function AllInOneCard({
 						<span
 							style={{
 								fontFamily: "monospace",
-								fontSize: "11px",
+								fontSize: isCompact ? "10px" : "11px",
 								fontWeight: 700,
 								textTransform: "uppercase",
 								letterSpacing: "0.08em",
@@ -113,7 +236,7 @@ export function AllInOneCard({
 								fontFamily: "monospace",
 							}}
 						>
-							Palette: {theme} ({resolvedMode})
+							{theme} ({resolvedMode})
 						</span>
 						<span
 							style={{
@@ -129,16 +252,31 @@ export function AllInOneCard({
 						>
 							Radius: {tokens?.radius || "0.625rem"}
 						</span>
+						{isCompact && (
+							<span
+								style={{
+									fontSize: "9px",
+									padding: "1px 6px",
+									borderRadius: "3px",
+									backgroundColor: tokens?.primary || "var(--primary, #38bdf8)",
+									color: "#ffffff",
+									fontWeight: 700,
+									textTransform: "uppercase",
+								}}
+							>
+								Compact Density
+							</span>
+						)}
 					</div>
 
 					{/* Heading with fontHeading */}
 					<h2
 						style={{
-							fontSize: "1.65rem",
+							fontSize: isCompact ? "1.25rem" : "1.65rem",
 							fontWeight: 800,
 							letterSpacing: "-0.02em",
 							margin: 0,
-							fontFamily: tokens?.fontHeading || "var(--font-heading, inherit)",
+							fontFamily: tokens?.fontHeading || "var(--font-heading, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
 							color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
 							lineHeight: 1.25,
 						}}
@@ -147,31 +285,24 @@ export function AllInOneCard({
 					</h2>
 
 					{/* Subtitle / Body text with fontBody & textMuted */}
-					<p
-						style={{
-							fontSize: "0.875rem",
-							margin: "0.4rem 0 0 0",
-							lineHeight: 1.5,
-							color: tokens?.textMuted || "var(--text-muted, #94a3b8)",
-						}}
-					>
-						{subtitle}{" "}
-						<span
+					{!isCompact && (
+						<p
 							style={{
-								color: tokens?.primary || "var(--primary, #38bdf8)",
-								textDecoration: "underline",
-								cursor: "pointer",
-								fontWeight: 600,
+								fontSize: "0.85rem",
+								margin: "0.4rem 0 0 0",
+								lineHeight: 1.5,
+								color: tokens?.textMuted || "var(--text-muted, #94a3b8)",
 							}}
-							onClick={() => themeContext?.openStudio()}
 						>
-							Launch live customizer →
-						</span>
-					</p>
+							{subtitle}
+						</p>
+					)}
 				</div>
 
-				{/* SEGMENTED VIEW CONTROLLER */}
+				{/* SEGMENTED VIEW CONTROLLER: Standard / Compact / Tokens (Protected with data-segmented & data-no-tactile) */}
 				<div
+					data-segmented="true"
+					data-no-tactile="true"
 					style={{
 						display: "inline-flex",
 						padding: "3px",
@@ -181,31 +312,37 @@ export function AllInOneCard({
 						gap: "2px",
 					}}
 				>
-					{(["standard", "compact", "tokens"] as const).map((seg) => (
+					{(
+						[
+							{ id: "standard", label: "Standard" },
+							{ id: "compact", label: "Compact" },
+							{ id: "tokens", label: "Tokens" },
+						] as const
+					).map((seg) => (
 						<button
-							key={seg}
+							key={seg.id}
 							type="button"
-							onClick={() => setActiveSegment(seg)}
+							data-no-tactile="true"
+							onClick={() => setActiveSegment(seg.id)}
+							className="aio-segment-btn no-tactile"
 							style={{
-								padding: "5px 12px",
-								fontSize: "11px",
-								fontWeight: 600,
+								padding: isCompact ? "3px 10px" : "5px 12px",
+								fontSize: isCompact ? "10px" : "11px",
+								fontWeight: activeSegment === seg.id ? 700 : 500,
 								textTransform: "capitalize",
-								cursor: "pointer",
 								borderRadius: `calc(${tokens?.radius || "0.625rem"} - 2px)`,
 								border: "none",
 								backgroundColor:
-									activeSegment === seg
+									activeSegment === seg.id
 										? tokens?.primary || "var(--primary, #38bdf8)"
 										: "transparent",
 								color:
-									activeSegment === seg
+									activeSegment === seg.id
 										? "#ffffff"
 										: tokens?.textMuted || "var(--text-muted, #94a3b8)",
-								transition: "all 0.15s ease",
 							}}
 						>
-							{seg}
+							{seg.label}
 						</button>
 					))}
 				</div>
@@ -253,6 +390,9 @@ export function AllInOneCard({
 								primary: tokens?.primary || "var(--primary)",
 								secondary: tokens?.secondary || "var(--secondary)",
 								accent: tokens?.accent || "var(--accent)",
+								success: tokens?.success || "var(--success)",
+								warning: tokens?.warning || "var(--warning)",
+								danger: tokens?.danger || "var(--danger)",
 								card: tokens?.card || "var(--card)",
 								surface: tokens?.surface || "var(--surface)",
 								border: tokens?.border || "var(--border)",
@@ -269,11 +409,17 @@ export function AllInOneCard({
 				</div>
 			)}
 
-			{/* SECTION 1: ALL BUTTONS */}
-			<div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+			{/* SECTION 1: ALL BUTTONS WITH INTERACTIVE HOVER & TACTILE PRESS */}
+			<div
+				style={{
+					display: "flex",
+					flexDirection: "column",
+					gap: isCompact ? "0.4rem" : "0.6rem",
+				}}
+			>
 				<div
 					style={{
-						fontSize: "11px",
+						fontSize: isCompact ? "10px" : "11px",
 						fontWeight: 700,
 						textTransform: "uppercase",
 						letterSpacing: "0.06em",
@@ -287,7 +433,7 @@ export function AllInOneCard({
 					<span
 						style={{ fontSize: "10px", textTransform: "none", fontWeight: 500 }}
 					>
-						Hover &amp; click to preview tokens &amp; mechanical tactile physics
+						Hover to feel interactive elevation, click to trigger state
 					</span>
 				</div>
 
@@ -296,24 +442,23 @@ export function AllInOneCard({
 						display: "flex",
 						flexWrap: "wrap",
 						alignItems: "center",
-						gap: "0.65rem",
+						gap: isCompact ? "0.45rem" : "0.65rem",
 					}}
 				>
 					{/* Primary Solid */}
 					<button
 						type="button"
 						onClick={() => setPrimaryCount((c) => c + 1)}
+						className="aio-btn"
 						style={{
-							padding: "8px 16px",
-							fontSize: "12px",
+							padding: isCompact ? "5px 12px" : "8px 16px",
+							fontSize: isCompact ? "11px" : "12px",
 							fontWeight: 600,
 							color: "#ffffff",
 							backgroundColor: tokens?.primary || "var(--primary, #38bdf8)",
-							border: "1px solid transparent",
+							border: tactileBtnBorder,
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-							cursor: "pointer",
-							boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
-							transition: "all 0.15s ease",
+							boxShadow: tactileBtnShadow,
 						}}
 					>
 						Primary ({primaryCount} clicks)
@@ -322,17 +467,16 @@ export function AllInOneCard({
 					{/* Secondary Solid */}
 					<button
 						type="button"
+						className="aio-btn"
 						style={{
-							padding: "8px 16px",
-							fontSize: "12px",
+							padding: isCompact ? "5px 12px" : "8px 16px",
+							fontSize: isCompact ? "11px" : "12px",
 							fontWeight: 600,
 							color: "#ffffff",
 							backgroundColor: tokens?.secondary || "var(--secondary, #818cf8)",
-							border: "1px solid transparent",
+							border: tactileBtnBorder,
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-							cursor: "pointer",
-							boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
-							transition: "all 0.15s ease",
+							boxShadow: tactileBtnShadow,
 						}}
 					>
 						Secondary Action
@@ -341,17 +485,16 @@ export function AllInOneCard({
 					{/* Accent Solid */}
 					<button
 						type="button"
+						className="aio-btn"
 						style={{
-							padding: "8px 16px",
-							fontSize: "12px",
+							padding: isCompact ? "5px 12px" : "8px 16px",
+							fontSize: isCompact ? "11px" : "12px",
 							fontWeight: 600,
 							color: "#ffffff",
 							backgroundColor: tokens?.accent || "var(--accent, #34d399)",
-							border: "1px solid transparent",
+							border: tactileBtnBorder,
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-							cursor: "pointer",
-							boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
-							transition: "all 0.15s ease",
+							boxShadow: tactileBtnShadow,
 						}}
 					>
 						Accent Action
@@ -360,17 +503,16 @@ export function AllInOneCard({
 					{/* Success Solid */}
 					<button
 						type="button"
+						className="aio-btn"
 						style={{
-							padding: "8px 16px",
-							fontSize: "12px",
+							padding: isCompact ? "5px 12px" : "8px 16px",
+							fontSize: isCompact ? "11px" : "12px",
 							fontWeight: 600,
 							color: "#ffffff",
 							backgroundColor: tokens?.success || "var(--success, #10b981)",
-							border: "1px solid transparent",
+							border: tactileBtnBorder,
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-							cursor: "pointer",
-							boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
-							transition: "all 0.15s ease",
+							boxShadow: tactileBtnShadow,
 						}}
 					>
 						Success Confirm
@@ -379,17 +521,16 @@ export function AllInOneCard({
 					{/* Warning Solid */}
 					<button
 						type="button"
+						className="aio-btn"
 						style={{
-							padding: "8px 16px",
-							fontSize: "12px",
+							padding: isCompact ? "5px 12px" : "8px 16px",
+							fontSize: isCompact ? "11px" : "12px",
 							fontWeight: 600,
 							color: "#ffffff",
 							backgroundColor: tokens?.warning || "var(--warning, #f59e0b)",
-							border: "1px solid transparent",
+							border: tactileBtnBorder,
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-							cursor: "pointer",
-							boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
-							transition: "all 0.15s ease",
+							boxShadow: tactileBtnShadow,
 						}}
 					>
 						Warning Notice
@@ -399,17 +540,16 @@ export function AllInOneCard({
 					<button
 						type="button"
 						onClick={() => setIsModalOpen(true)}
+						className="aio-btn"
 						style={{
-							padding: "8px 16px",
-							fontSize: "12px",
+							padding: isCompact ? "5px 12px" : "8px 16px",
+							fontSize: isCompact ? "11px" : "12px",
 							fontWeight: 600,
 							color: "#ffffff",
 							backgroundColor: tokens?.danger || "var(--danger, #ef4444)",
-							border: "1px solid transparent",
+							border: tactileBtnBorder,
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-							cursor: "pointer",
-							boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
-							transition: "all 0.15s ease",
+							boxShadow: tactileBtnShadow,
 						}}
 					>
 						Destructive Dialog
@@ -418,16 +558,15 @@ export function AllInOneCard({
 					{/* Ghost Outline Button */}
 					<button
 						type="button"
+						className="aio-btn aio-btn-outline"
 						style={{
-							padding: "8px 16px",
-							fontSize: "12px",
+							padding: isCompact ? "5px 12px" : "8px 16px",
+							fontSize: isCompact ? "11px" : "12px",
 							fontWeight: 600,
 							color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
 							backgroundColor: "transparent",
 							border: `1px solid ${tokens?.border || "var(--border, #1e293b)"}`,
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-							cursor: "pointer",
-							transition: "all 0.15s ease",
 						}}
 					>
 						Ghost Outline
@@ -436,16 +575,15 @@ export function AllInOneCard({
 					{/* Subtle Surface Button */}
 					<button
 						type="button"
+						className="aio-btn aio-btn-subtle"
 						style={{
-							padding: "8px 16px",
-							fontSize: "12px",
+							padding: isCompact ? "5px 12px" : "8px 16px",
+							fontSize: isCompact ? "11px" : "12px",
 							fontWeight: 600,
 							color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
 							backgroundColor: tokens?.surface || "var(--surface, #111827)",
 							border: `1px solid ${tokens?.border || "var(--border, #1e293b)"}`,
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-							cursor: "pointer",
-							transition: "all 0.15s ease",
 						}}
 					>
 						Subtle Surface
@@ -454,16 +592,15 @@ export function AllInOneCard({
 					{/* Pill Button (Full Radius) */}
 					<button
 						type="button"
+						className="aio-btn aio-btn-pill"
 						style={{
-							padding: "8px 18px",
-							fontSize: "12px",
+							padding: isCompact ? "5px 14px" : "8px 18px",
+							fontSize: isCompact ? "11px" : "12px",
 							fontWeight: 600,
 							color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
 							backgroundColor: tokens?.surface || "var(--surface, #111827)",
 							border: `1px solid ${tokens?.border || "var(--border, #1e293b)"}`,
 							borderRadius: "9999px",
-							cursor: "pointer",
-							transition: "all 0.15s ease",
 						}}
 					>
 						Pill Button (Full Radius)
@@ -480,10 +617,10 @@ export function AllInOneCard({
 								navigator.vibrate?.(25);
 							}
 						}}
-						className="tactile-item tactile-always-active"
+						className="aio-btn aio-btn-tactile tactile-item tactile-always-active"
 						style={{
-							padding: "8px 16px",
-							fontSize: "12px",
+							padding: isCompact ? "5px 12px" : "8px 16px",
+							fontSize: isCompact ? "11px" : "12px",
 							fontWeight: 700,
 							fontFamily: "monospace",
 							color: "#ffffff",
@@ -492,10 +629,7 @@ export function AllInOneCard({
 								: tokens?.primary || "var(--primary, #38bdf8)",
 							border: "2px solid #000000",
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-							cursor: "pointer",
 							boxShadow: "4px 4px 0px 0px #000000",
-							userSelect: "none",
-							transition: "transform 0.08s ease, box-shadow 0.08s ease",
 						}}
 					>
 						{isPulseActive
@@ -506,9 +640,10 @@ export function AllInOneCard({
 					{/* Themed Icon Button */}
 					<button
 						type="button"
+						className="aio-btn aio-btn-subtle"
 						style={{
-							width: "36px",
-							height: "36px",
+							width: isCompact ? "30px" : "36px",
+							height: isCompact ? "30px" : "36px",
 							display: "flex",
 							alignItems: "center",
 							justifyContent: "center",
@@ -516,8 +651,7 @@ export function AllInOneCard({
 							border: `1px solid ${tokens?.border || "var(--border, #1e293b)"}`,
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
 							color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
-							cursor: "pointer",
-							fontSize: "14px",
+							fontSize: isCompact ? "12px" : "14px",
 						}}
 						title="Themed Icon Action"
 						aria-label="Themed Icon Action"
@@ -527,11 +661,17 @@ export function AllInOneCard({
 				</div>
 			</div>
 
-			{/* SECTION 2: STATUS BADGES & GLOW CHIPS */}
-			<div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+			{/* SECTION 2: STATUS BADGES & GLOW CHIPS (Completely static indicator badges) */}
+			<div
+				style={{
+					display: "flex",
+					flexDirection: "column",
+					gap: isCompact ? "0.35rem" : "0.6rem",
+				}}
+			>
 				<div
 					style={{
-						fontSize: "11px",
+						fontSize: isCompact ? "10px" : "11px",
 						fontWeight: 700,
 						textTransform: "uppercase",
 						letterSpacing: "0.06em",
@@ -546,77 +686,89 @@ export function AllInOneCard({
 						display: "flex",
 						flexWrap: "wrap",
 						alignItems: "center",
-						gap: "0.5rem",
+						gap: isCompact ? "0.35rem" : "0.5rem",
 					}}
 				>
 					<span
 						style={{
-							padding: "3px 10px",
-							fontSize: "11px",
+							padding: isCompact ? "2px 8px" : "3px 10px",
+							fontSize: isCompact ? "10px" : "11px",
 							fontWeight: 600,
 							borderRadius: "9999px",
 							backgroundColor: tokens?.primary || "var(--primary, #38bdf8)",
 							color: "#ffffff",
+							userSelect: "none",
+							display: "inline-block",
 						}}
 					>
 						Primary Chip
 					</span>
 					<span
 						style={{
-							padding: "3px 10px",
-							fontSize: "11px",
+							padding: isCompact ? "2px 8px" : "3px 10px",
+							fontSize: isCompact ? "10px" : "11px",
 							fontWeight: 600,
 							borderRadius: "9999px",
 							backgroundColor: tokens?.secondary || "var(--secondary, #818cf8)",
 							color: "#ffffff",
+							userSelect: "none",
+							display: "inline-block",
 						}}
 					>
 						Secondary Chip
 					</span>
 					<span
 						style={{
-							padding: "3px 10px",
-							fontSize: "11px",
+							padding: isCompact ? "2px 8px" : "3px 10px",
+							fontSize: isCompact ? "10px" : "11px",
 							fontWeight: 600,
 							borderRadius: "9999px",
 							backgroundColor: tokens?.accent || "var(--accent, #34d399)",
 							color: "#ffffff",
+							userSelect: "none",
+							display: "inline-block",
 						}}
 					>
 						Accent Chip
 					</span>
 					<span
 						style={{
-							padding: "3px 10px",
-							fontSize: "11px",
+							padding: isCompact ? "2px 8px" : "3px 10px",
+							fontSize: isCompact ? "10px" : "11px",
 							fontWeight: 600,
 							borderRadius: "9999px",
 							backgroundColor: tokens?.success || "var(--success, #10b981)",
 							color: "#ffffff",
+							userSelect: "none",
+							display: "inline-block",
 						}}
 					>
 						Success ● Active
 					</span>
 					<span
 						style={{
-							padding: "3px 10px",
-							fontSize: "11px",
+							padding: isCompact ? "2px 8px" : "3px 10px",
+							fontSize: isCompact ? "10px" : "11px",
 							fontWeight: 600,
 							borderRadius: "9999px",
 							backgroundColor: tokens?.warning || "var(--warning, #f59e0b)",
 							color: "#ffffff",
+							userSelect: "none",
+							display: "inline-block",
 						}}
 					>
 						Warning ● Alert
 					</span>
 					<span
 						style={{
-							padding: "3px 10px",
-							fontSize: "11px",
+							padding: isCompact ? "2px 8px" : "3px 10px",
+							fontSize: isCompact ? "10px" : "11px",
 							fontWeight: 600,
 							borderRadius: "9999px",
 							backgroundColor: tokens?.danger || "var(--danger, #ef4444)",
 							color: "#ffffff",
+							userSelect: "none",
+							display: "inline-block",
 						}}
 					>
 						Danger ● Critical
@@ -624,8 +776,8 @@ export function AllInOneCard({
 					{/* Glow Pill */}
 					<span
 						style={{
-							padding: "3px 12px",
-							fontSize: "11px",
+							padding: isCompact ? "2px 10px" : "3px 12px",
+							fontSize: isCompact ? "10px" : "11px",
 							fontWeight: 700,
 							borderRadius: "9999px",
 							backgroundColor: tokens?.surface || "var(--surface, #111827)",
@@ -635,6 +787,8 @@ export function AllInOneCard({
 								tokens?.primary ||
 								"var(--primary, #38bdf8)",
 							boxShadow: `0 0 12px ${tokens?.glowColor || tokens?.primary || "var(--primary, #38bdf8)"}55`,
+							userSelect: "none",
+							display: "inline-block",
 						}}
 					>
 						✨ Neon Glow Token
@@ -643,10 +797,16 @@ export function AllInOneCard({
 			</div>
 
 			{/* SECTION 3: FORM CONTROLS, INPUTS, TOGGLE & SLIDER */}
-			<div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+			<div
+				style={{
+					display: "flex",
+					flexDirection: "column",
+					gap: isCompact ? "0.4rem" : "0.6rem",
+				}}
+			>
 				<div
 					style={{
-						fontSize: "11px",
+						fontSize: isCompact ? "10px" : "11px",
 						fontWeight: 700,
 						textTransform: "uppercase",
 						letterSpacing: "0.06em",
@@ -659,8 +819,10 @@ export function AllInOneCard({
 				<div
 					style={{
 						display: "grid",
-						gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-						gap: "1rem",
+						gridTemplateColumns: isCompact
+							? "repeat(auto-fit, minmax(200px, 1fr))"
+							: "repeat(auto-fit, minmax(240px, 1fr))",
+						gap: isCompact ? "0.6rem" : "1rem",
 					}}
 				>
 					{/* Text Input Field */}
@@ -668,7 +830,7 @@ export function AllInOneCard({
 						<label
 							htmlFor="allinone-email"
 							style={{
-								fontSize: "11px",
+								fontSize: isCompact ? "10px" : "11px",
 								fontWeight: 600,
 								color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
 							}}
@@ -683,14 +845,15 @@ export function AllInOneCard({
 							style={{
 								width: "100%",
 								boxSizing: "border-box",
-								padding: "8px 12px",
-								fontSize: "12px",
+								padding: isCompact ? "5px 10px" : "8px 12px",
+								fontSize: isCompact ? "11px" : "12px",
 								backgroundColor: tokens?.surface || "var(--surface, #111827)",
 								border: `1px solid ${tokens?.border || "var(--border, #1e293b)"}`,
 								borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
 								color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
 								outline: "none",
 								fontFamily: tokens?.fontBody || "inherit",
+								transition: "border-color 0.15s ease",
 							}}
 						/>
 					</div>
@@ -700,7 +863,7 @@ export function AllInOneCard({
 						<label
 							htmlFor="allinone-select"
 							style={{
-								fontSize: "11px",
+								fontSize: isCompact ? "10px" : "11px",
 								fontWeight: 600,
 								color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
 							}}
@@ -714,8 +877,8 @@ export function AllInOneCard({
 							style={{
 								width: "100%",
 								boxSizing: "border-box",
-								padding: "8px 12px",
-								fontSize: "12px",
+								padding: isCompact ? "5px 10px" : "8px 12px",
+								fontSize: isCompact ? "11px" : "12px",
 								backgroundColor: tokens?.surface || "var(--surface, #111827)",
 								border: `1px solid ${tokens?.border || "var(--border, #1e293b)"}`,
 								borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
@@ -742,7 +905,7 @@ export function AllInOneCard({
 						>
 							<span
 								style={{
-									fontSize: "11px",
+									fontSize: isCompact ? "10px" : "11px",
 									fontWeight: 600,
 									color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
 								}}
@@ -751,7 +914,7 @@ export function AllInOneCard({
 							</span>
 							<span
 								style={{
-									fontSize: "11px",
+									fontSize: isCompact ? "10px" : "11px",
 									fontFamily: "monospace",
 									color: tokens?.primary || "var(--primary, #38bdf8)",
 									fontWeight: 700,
@@ -770,19 +933,19 @@ export function AllInOneCard({
 								width: "100%",
 								cursor: "pointer",
 								accentColor: tokens?.primary || "var(--primary, #38bdf8)",
-								height: "6px",
-								marginTop: "6px",
+								height: isCompact ? "4px" : "6px",
+								marginTop: isCompact ? "3px" : "6px",
 							}}
 						/>
 						{/* Progress Bar indicator */}
 						<div
 							style={{
 								width: "100%",
-								height: "4px",
+								height: isCompact ? "3px" : "4px",
 								backgroundColor: tokens?.surface || "var(--surface, #111827)",
 								borderRadius: "9999px",
 								overflow: "hidden",
-								marginTop: "4px",
+								marginTop: "3px",
 							}}
 						>
 							<div
@@ -802,7 +965,7 @@ export function AllInOneCard({
 							display: "flex",
 							alignItems: "center",
 							justifyContent: "space-between",
-							padding: "8px 14px",
+							padding: isCompact ? "6px 10px" : "8px 14px",
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
 							backgroundColor: tokens?.surface || "var(--surface, #111827)",
 							border: `1px solid ${tokens?.border || "var(--border, #1e293b)"}`,
@@ -816,7 +979,7 @@ export function AllInOneCard({
 								gap: "8px",
 								cursor: "pointer",
 								userSelect: "none",
-								fontSize: "11px",
+								fontSize: isCompact ? "10px" : "11px",
 								fontWeight: 600,
 								color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
 							}}
@@ -824,8 +987,8 @@ export function AllInOneCard({
 							<div
 								onClick={() => setSwitchOn(!switchOn)}
 								style={{
-									width: "36px",
-									height: "20px",
+									width: isCompact ? "30px" : "36px",
+									height: isCompact ? "18px" : "20px",
 									borderRadius: "9999px",
 									backgroundColor: switchOn
 										? tokens?.primary || "var(--primary, #38bdf8)"
@@ -836,13 +999,13 @@ export function AllInOneCard({
 							>
 								<div
 									style={{
-										width: "16px",
-										height: "16px",
+										width: isCompact ? "14px" : "16px",
+										height: isCompact ? "14px" : "16px",
 										borderRadius: "9999px",
 										backgroundColor: "#ffffff",
 										position: "absolute",
 										top: "2px",
-										left: switchOn ? "18px" : "2px",
+										left: switchOn ? (isCompact ? "14px" : "18px") : "2px",
 										transition: "left 0.2s ease",
 										boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
 									}}
@@ -859,7 +1022,7 @@ export function AllInOneCard({
 								gap: "6px",
 								cursor: "pointer",
 								userSelect: "none",
-								fontSize: "11px",
+								fontSize: isCompact ? "10px" : "11px",
 								fontWeight: 600,
 								color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
 							}}
@@ -871,8 +1034,8 @@ export function AllInOneCard({
 								style={{
 									cursor: "pointer",
 									accentColor: tokens?.accent || "var(--accent, #34d399)",
-									width: "16px",
-									height: "16px",
+									width: isCompact ? "14px" : "16px",
+									height: isCompact ? "14px" : "16px",
 								}}
 							/>
 							<span>Telemetry</span>
@@ -884,7 +1047,7 @@ export function AllInOneCard({
 			{/* SECTION 4: INLINE SEMANTIC CALLOUT BANNER */}
 			<div
 				style={{
-					padding: "12px 16px",
+					padding: isCompact ? "8px 12px" : "12px 16px",
 					borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
 					backgroundColor: tokens?.surface || "var(--surface, #111827)",
 					borderLeft: `4px solid ${tokens?.primary || "var(--primary, #38bdf8)"}`,
@@ -899,21 +1062,21 @@ export function AllInOneCard({
 				}}
 			>
 				<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-					<span style={{ fontSize: "20px" }}>🚀</span>
+					<span style={{ fontSize: isCompact ? "16px" : "20px" }}>🚀</span>
 					<div>
 						<div
 							style={{
-								fontSize: "12px",
+								fontSize: isCompact ? "11px" : "12px",
 								fontWeight: 700,
 								color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
-								fontFamily: tokens?.fontHeading || "inherit",
+								fontFamily: tokens?.fontHeading || "var(--font-heading, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
 							}}
 						>
 							Zero-Runtime CSS Engine Active
 						</div>
 						<div
 							style={{
-								fontSize: "11px",
+								fontSize: isCompact ? "10px" : "11px",
 								color: tokens?.textMuted || "var(--text-muted, #94a3b8)",
 							}}
 						>
@@ -926,47 +1089,32 @@ export function AllInOneCard({
 				<div style={{ display: "flex", gap: "6px" }}>
 					<button
 						type="button"
+						onClick={() => setActiveSegment("tokens")}
+						className="aio-btn"
 						style={{
-							padding: "5px 12px",
-							fontSize: "11px",
+							padding: isCompact ? "4px 10px" : "5px 12px",
+							fontSize: isCompact ? "10px" : "11px",
 							fontWeight: 600,
-							color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
+							color: tokens?.primary || "var(--primary, #38bdf8)",
 							backgroundColor: tokens?.card || "var(--card, #162032)",
 							border: `1px solid ${tokens?.border || "var(--border, #1e293b)"}`,
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-							cursor: "pointer",
 						}}
 					>
-						Dismiss
-					</button>
-					<button
-						type="button"
-						onClick={() => themeContext?.openStudio()}
-						style={{
-							padding: "5px 12px",
-							fontSize: "11px",
-							fontWeight: 600,
-							color: "#ffffff",
-							backgroundColor: tokens?.primary || "var(--primary, #38bdf8)",
-							border: "none",
-							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-							cursor: "pointer",
-						}}
-					>
-						Customize Tokens
+						Inspect Tokens
 					</button>
 				</div>
 			</div>
 
-			{/* CARD FOOTER */}
+			{/* CARD FOOTER WITH METADATA & FUNCTIONAL ACTIONS */}
 			<div
 				style={{
 					display: "flex",
 					alignItems: "center",
 					justifyContent: "space-between",
 					borderTop: `1px solid ${tokens?.border || "var(--border, #1e293b)"}`,
-					paddingTop: "1rem",
-					fontSize: "11px",
+					paddingTop: isCompact ? "0.65rem" : "1rem",
+					fontSize: isCompact ? "10px" : "11px",
 					color: tokens?.textMuted || "var(--text-muted, #94a3b8)",
 					flexWrap: "wrap",
 					gap: "0.75rem",
@@ -990,51 +1138,51 @@ export function AllInOneCard({
 					<span>•</span>
 					<span style={{ fontFamily: "monospace" }}>
 						Heading:{" "}
-						{tokens?.fontHeading
-							? tokens.fontHeading.split(",")[0].replace(/"/g, "")
-							: "System"}
+						{extractFontFamily(tokens?.fontHeading) || "System"}
 					</span>
 					<span>•</span>
 					<span style={{ fontFamily: "monospace" }}>
 						Body:{" "}
-						{tokens?.fontBody
-							? tokens.fontBody.split(",")[0].replace(/"/g, "")
-							: "System"}
+						{extractFontFamily(tokens?.fontBody) || "System"}
 					</span>
 				</div>
 
 				<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
 					<button
 						type="button"
+						onClick={handleReset}
+						className="aio-btn aio-btn-subtle"
 						style={{
-							padding: "6px 14px",
-							fontSize: "11px",
+							padding: isCompact ? "4px 10px" : "6px 14px",
+							fontSize: isCompact ? "10px" : "11px",
 							fontWeight: 600,
 							color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
 							backgroundColor: "transparent",
 							border: `1px solid ${tokens?.border || "var(--border, #1e293b)"}`,
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-							cursor: "pointer",
 						}}
 					>
 						Reset
 					</button>
+
 					<button
 						type="button"
-						onClick={() => themeContext?.openStudio()}
+						onClick={handleVerifySubmit}
+						className="aio-btn"
 						style={{
-							padding: "6px 16px",
-							fontSize: "11px",
+							padding: isCompact ? "4px 12px" : "6px 16px",
+							fontSize: isCompact ? "10px" : "11px",
 							fontWeight: 700,
 							color: "#ffffff",
-							backgroundColor: tokens?.primary || "var(--primary, #38bdf8)",
+							backgroundColor: isSavedFeedback
+								? tokens?.success || "var(--success, #10b981)"
+								: tokens?.primary || "var(--primary, #38bdf8)",
 							border: "none",
 							borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-							cursor: "pointer",
 							boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
 						}}
 					>
-						Open Theme Studio
+						{isSavedFeedback ? "✓ State Verified" : "Verify Form State"}
 					</button>
 				</div>
 			</div>
@@ -1068,8 +1216,12 @@ export function AllInOneCard({
 							gap: "1rem",
 						}}
 					>
-						<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-							<span style={{ fontSize: "20px" }}>⚠️</span>
+						<div
+							style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+						>
+							<span style={{ fontSize: "1.25rem", color: tokens?.danger }}>
+								⚠️
+							</span>
 							<h3
 								style={{
 									margin: 0,
@@ -1082,6 +1234,7 @@ export function AllInOneCard({
 								Destructive Action Test
 							</h3>
 						</div>
+
 						<p
 							style={{
 								margin: 0,
@@ -1090,30 +1243,30 @@ export function AllInOneCard({
 								color: tokens?.textMuted || "var(--text-muted, #94a3b8)",
 							}}
 						>
-							This modal dialog confirms that backdrops, overlays, rounded
-							corners, and destructive theme tokens render consistently across
-							palettes.
+							This modal dialog confirms that overlay backdrops, borders,
+							surfaces, and danger tokens respond accurately in real-time.
 						</p>
+
 						<div
 							style={{
 								display: "flex",
 								justifyContent: "flex-end",
-								gap: "8px",
+								gap: "0.5rem",
 								paddingTop: "0.5rem",
 							}}
 						>
 							<button
 								type="button"
 								onClick={() => setIsModalOpen(false)}
+								className="aio-btn aio-btn-subtle"
 								style={{
 									padding: "6px 14px",
-									fontSize: "12px",
+									fontSize: "11px",
 									fontWeight: 600,
+									borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
 									backgroundColor: tokens?.card || "var(--card, #162032)",
 									color: tokens?.textPrimary || "var(--text-primary, #f8fafc)",
 									border: `1px solid ${tokens?.border || "var(--border, #1e293b)"}`,
-									borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-									cursor: "pointer",
 								}}
 							>
 								Cancel
@@ -1121,15 +1274,15 @@ export function AllInOneCard({
 							<button
 								type="button"
 								onClick={() => setIsModalOpen(false)}
+								className="aio-btn"
 								style={{
-									padding: "6px 16px",
-									fontSize: "12px",
+									padding: "6px 14px",
+									fontSize: "11px",
 									fontWeight: 700,
+									borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
 									backgroundColor: tokens?.danger || "var(--danger, #ef4444)",
 									color: "#ffffff",
 									border: "none",
-									borderRadius: tokens?.radius || "var(--radius, 0.625rem)",
-									cursor: "pointer",
 								}}
 							>
 								Confirm Delete

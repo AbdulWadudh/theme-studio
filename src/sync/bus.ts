@@ -8,6 +8,7 @@ export function createSyncBus<T = unknown>(
 			post: () => {},
 			subscribe: () => () => {},
 			close: () => {},
+			destroy: () => {},
 		};
 	}
 
@@ -28,6 +29,9 @@ export function createSyncBus<T = unknown>(
 				return () => channel.removeEventListener("message", handler);
 			},
 			close() {
+				channel.close();
+			},
+			destroy() {
 				channel.close();
 			},
 		};
@@ -57,5 +61,6 @@ export function createSyncBus<T = unknown>(
 			return () => window.removeEventListener("storage", handler);
 		},
 		close() {},
+		destroy() {},
 	};
 }

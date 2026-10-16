@@ -10,6 +10,7 @@ import {
 } from "react";
 import { loadFontsourceFont, syncActiveFontCache } from "../core/fonts";
 import { defaultPresets } from "../core/presets";
+import { TACTILE_CSS_RULES } from "../core/tactile";
 import { resolveActiveTokens, tokensToCssVars } from "../core/tokens";
 import type {
 	BaseTokens,
@@ -49,26 +50,32 @@ export interface ThemeProviderProps<T extends BaseTokens = BaseTokens> {
 
 export function ThemeProvider<T extends BaseTokens = BaseTokens>({
 	children,
-	themes = defaultPresets as unknown as ThemeDefinition<T>[],
+	themes,
 	defaultTheme = "dark-slate",
 	defaultMode = "system",
-	storage = createCookieStorage(),
+	storage: customStorage,
 	storageKey = "k79_theme_state",
-	syncChannel = "k79-theme-sync",
+	syncChannel = "k79_theme_channel",
 	enableSync = true,
 	plugins = [],
 	studio = false,
 	initialState,
 }: ThemeProviderProps<T>) {
-	const [themeRegistry, setThemeRegistry] = useState<
-		Map<string, ThemeDefinition<T>>
-	>(() => {
+	const storage = useMemo(
+		() => customStorage || createCookieStorage(),
+		[customStorage],
+	);
+
+	const initialPresets = useMemo(() => {
+		const list = themes || (defaultPresets as unknown as ThemeDefinition<T>[]);
 		const map = new Map<string, ThemeDefinition<T>>();
-		themes.forEach((t) => {
+		for (const t of list) {
 			map.set(t.id, t);
-		});
+		}
 		return map;
-	});
+	}, [themes]);
+
+	const [themeRegistry, setThemeRegistry] = useState(initialPresets);
 
 	// Lazily read client-persisted state if initialState was not provided (SPA / Vite hydration)
 	const clientStored = useMemo<CompactCookiePayload<T> | null>(() => {
@@ -99,61 +106,37 @@ export function ThemeProvider<T extends BaseTokens = BaseTokens>({
 	const [customDelta, setCustomDelta] = useState<Partial<T> | undefined>(
 		initialState?.delta ?? clientStored?.d,
 	);
-	const [systemIsDark, setSystemIsDark] = useState<boolean>(() => {
-		if (initialState?.resolvedMode) {
-			return initialState.resolvedMode === "dark";
-		}
-		if (typeof window !== "undefined") {
+	const [isStudioOpen, setIsStudioOpen] = useState(false);
+
+	const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() => {
+		if (typeof window !== "undefined" && window.matchMedia) {
 			return window.matchMedia("(prefers-color-scheme: dark)").matches;
 		}
-		return true;
+		return false;
 	});
-	const [isStudioOpen, setIsStudioOpen] = useState<boolean>(false);
-
-	const syncBusRef = useRef(
-		enableSync ? createSyncBus<CompactCookiePayload<T>>(syncChannel) : null,
-	);
-
-	const studioConfig: ThemeStudioConfig | null = useMemo(() => {
-		if (!studio) return null;
-		if (typeof studio === "boolean") return { enabled: true };
-		return { enabled: true, ...studio };
-	}, [studio]);
 
 	useEffect(() => {
-		plugins.forEach((p) => {
-			p.onInit?.({
-				registerTheme: (theme) => {
-					setThemeRegistry((prev) => new Map(prev).set(theme.id, theme));
-				},
-			});
-		});
-	}, [plugins]);
-
-	useEffect(() => {
-		if (typeof window === "undefined") return;
+		if (typeof window === "undefined" || !window.matchMedia) return;
 		const mql = window.matchMedia("(prefers-color-scheme: dark)");
-		setSystemIsDark(mql.matches);
-
-		const handler = (e: MediaQueryListEvent) => setSystemIsDark(e.matches);
+		const handler = (e: MediaQueryListEvent) => setSystemPrefersDark(e.matches);
 		mql.addEventListener("change", handler);
 		return () => mql.removeEventListener("change", handler);
 	}, []);
 
 	const resolvedMode: ResolvedMode = useMemo(() => {
 		if (activeMode === "system") {
-			return systemIsDark ? "dark" : "light";
+			return systemPrefersDark ? "dark" : "light";
 		}
 		return activeMode;
-	}, [activeMode, systemIsDark]);
+	}, [activeMode, systemPrefersDark]);
 
 	const activePreset = useMemo(() => {
 		return (
 			themeRegistry.get(activeThemeId) ||
-			themes[0] ||
+			initialPresets.get(defaultTheme) ||
 			(defaultPresets[0] as unknown as ThemeDefinition<T>)
 		);
-	}, [themeRegistry, activeThemeId, themes]);
+	}, [themeRegistry, activeThemeId, initialPresets, defaultTheme]);
 
 	const activeTokens = useMemo(() => {
 		let resolved = resolveActiveTokens(activePreset, resolvedMode, customDelta);
@@ -165,64 +148,18 @@ export function ThemeProvider<T extends BaseTokens = BaseTokens>({
 		return resolved;
 	}, [activePreset, resolvedMode, customDelta, plugins]);
 
-	// Apply tokens and CSS variables to the DOM
-	const applyToDom = useCallback((tokens: T, mode: ResolvedMode) => {
-		if (typeof document === "undefined") return;
-		const root = document.documentElement;
-
-		root.classList.remove("light", "dark");
-		root.classList.add(mode);
-
-		const cssVars = tokensToCssVars(tokens);
-		for (const [key, val] of Object.entries(cssVars)) {
-			root.style.setProperty(key, val);
-		}
-
-		if (document.body) {
-			document.body.style.backgroundColor = "var(--canvas)";
-			document.body.style.color = "var(--text-primary)";
-		}
-
-		if (tokens.radius) {
-			root.style.setProperty("--radius", tokens.radius);
-			root.style.setProperty("--radius-card", tokens.radius);
-			root.style.setProperty("--radius-xs", `calc(${tokens.radius} * 0.25)`);
-			root.style.setProperty("--radius-sm", `calc(${tokens.radius} * 0.5)`);
-			root.style.setProperty("--radius-md", `calc(${tokens.radius} * 0.75)`);
-			root.style.setProperty("--radius-lg", tokens.radius);
-			root.style.setProperty("--radius-xl", `calc(${tokens.radius} * 1.25)`);
-			root.style.setProperty("--radius-2xl", `calc(${tokens.radius} * 1.5)`);
-			root.style.setProperty("--radius-3xl", `calc(${tokens.radius} * 2)`);
-		}
-
-		if (tokens.tactile === "true") {
-			root.setAttribute("data-tactile", "true");
-		} else {
-			root.removeAttribute("data-tactile");
-		}
-
-		if (tokens.fontHeading) {
-			loadFontsourceFont(tokens.fontHeading);
-			root.style.setProperty("--font-heading", tokens.fontHeading);
-		}
-		if (tokens.fontBody) {
-			loadFontsourceFont(tokens.fontBody);
-			root.style.setProperty("--font-body", tokens.fontBody);
-			root.style.fontFamily = tokens.fontBody;
-		}
-		syncActiveFontCache(tokens.fontHeading, tokens.fontBody);
-
-		window.dispatchEvent(
-			new CustomEvent("theme-changed", { detail: { tokens, mode } }),
-		);
-	}, []);
-
+	const syncBusRef = useRef<ReturnType<typeof createSyncBus> | null>(null);
 	useEffect(() => {
-		applyToDom(activeTokens, resolvedMode);
-		plugins.forEach((p) => {
-			p.onThemeChange?.(activePreset, resolvedMode);
-		});
-	}, [activeTokens, resolvedMode, activePreset, applyToDom, plugins]);
+		if (!enableSync) return;
+		const bus = createSyncBus(syncChannel);
+		syncBusRef.current = bus;
+		return () => {
+			if (bus) {
+				if (typeof (bus as any).destroy === "function") (bus as any).destroy();
+				else if (typeof (bus as any).close === "function") (bus as any).close();
+			}
+		};
+	}, [enableSync, syncChannel]);
 
 	const persistState = useCallback(
 		(themeId: string, mode: ColorMode, delta?: Partial<T>) => {
@@ -239,14 +176,71 @@ export function ThemeProvider<T extends BaseTokens = BaseTokens>({
 			storage.setItem(storageKey, serialized);
 			syncBusRef.current?.post("THEME_CHANGE", payload);
 		},
-		[storage, storageKey, defaultTheme],
+		[defaultTheme, storage, storageKey],
 	);
 
+	const applyToDom = useCallback(
+		(tokens: T, currentResolvedMode: ResolvedMode) => {
+			if (typeof document === "undefined") return;
+			const root = document.documentElement;
+
+			root.classList.remove("light", "dark");
+			root.classList.add(currentResolvedMode);
+
+			const cssVars = tokensToCssVars(tokens);
+			for (const [key, val] of Object.entries(cssVars)) {
+				if (typeof val === "string") {
+					root.style.setProperty(key, val);
+				}
+			}
+
+			if (tokens.radius) {
+				root.style.setProperty("--radius", tokens.radius);
+				root.style.setProperty("--radius-card", tokens.radius);
+				root.style.setProperty("--radius-lg", tokens.radius);
+				root.style.setProperty("--radius-md", `calc(${tokens.radius} * 0.75)`);
+				root.style.setProperty("--radius-sm", `calc(${tokens.radius} * 0.5)`);
+			}
+
+			if (tokens.fontHeading) {
+				loadFontsourceFont(tokens.fontHeading);
+			} else {
+				root.style.removeProperty("--font-heading");
+			}
+
+			if (tokens.fontBody) {
+				loadFontsourceFont(tokens.fontBody);
+				root.style.fontFamily = `var(--font-body, ${tokens.fontBody}, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)`;
+			} else {
+				root.style.removeProperty("--font-body");
+				root.style.removeProperty("font-family");
+			}
+
+			if (tokens.tactile === "true") {
+				root.setAttribute("data-tactile", "true");
+			} else {
+				root.removeAttribute("data-tactile");
+			}
+
+			syncActiveFontCache();
+		},
+		[],
+	);
+
+	useEffect(() => {
+		applyToDom(activeTokens, resolvedMode);
+		plugins.forEach((p) => {
+			p.onThemeChange?.(activePreset, resolvedMode);
+		});
+	}, [activeTokens, resolvedMode, activePreset, applyToDom, plugins]);
+
 	const setTheme = useCallback(
-		(id: string) => {
-			setActiveThemeId(id);
-			setCustomDelta(undefined);
-			persistState(id, activeMode, undefined);
+		(themeId: string) => {
+			setActiveThemeId(themeId);
+			setCustomDelta((prev) => {
+				persistState(themeId, activeMode, prev);
+				return prev;
+			});
 		},
 		[activeMode, persistState],
 	);
@@ -261,41 +255,33 @@ export function ThemeProvider<T extends BaseTokens = BaseTokens>({
 
 	const setCustomTokens = useCallback(
 		(newTokens: Partial<T>) => {
-			// 1. Direct synchronous CSS variable update on the DOM for 0ms input latency
 			if (typeof document !== "undefined") {
 				const root = document.documentElement;
-				const cssVars = tokensToCssVars(newTokens as Record<string, string>);
-				for (const [k, v] of Object.entries(cssVars)) {
-					root.style.setProperty(k, v);
+				const rawCssVars = tokensToCssVars(newTokens);
+				for (const [key, val] of Object.entries(rawCssVars)) {
+					if (typeof val === "string") {
+						root.style.setProperty(key, val);
+					}
 				}
 				if (newTokens.radius) {
 					root.style.setProperty("--radius", newTokens.radius);
 					root.style.setProperty("--radius-card", newTokens.radius);
+					root.style.setProperty("--radius-lg", newTokens.radius);
 					root.style.setProperty(
-						"--radius-xs",
-						`calc(${newTokens.radius} * 0.25)`,
+						"--radius-md",
+						`calc(${newTokens.radius} * 0.75)`,
 					);
 					root.style.setProperty(
 						"--radius-sm",
 						`calc(${newTokens.radius} * 0.5)`,
 					);
-					root.style.setProperty(
-						"--radius-md",
-						`calc(${newTokens.radius} * 0.75)`,
-					);
-					root.style.setProperty("--radius-lg", newTokens.radius);
-					root.style.setProperty(
-						"--radius-xl",
-						`calc(${newTokens.radius} * 1.25)`,
-					);
-					root.style.setProperty(
-						"--radius-2xl",
-						`calc(${newTokens.radius} * 1.5)`,
-					);
-					root.style.setProperty(
-						"--radius-3xl",
-						`calc(${newTokens.radius} * 2)`,
-					);
+				}
+				if (newTokens.fontHeading) {
+					loadFontsourceFont(newTokens.fontHeading);
+				}
+				if (newTokens.fontBody) {
+					loadFontsourceFont(newTokens.fontBody);
+					root.style.fontFamily = `var(--font-body, ${newTokens.fontBody}, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)`;
 				}
 				if (newTokens.tactile !== undefined) {
 					if (newTokens.tactile === "true") {
@@ -304,49 +290,65 @@ export function ThemeProvider<T extends BaseTokens = BaseTokens>({
 						root.removeAttribute("data-tactile");
 					}
 				}
-				if (newTokens.fontHeading) {
-					loadFontsourceFont(newTokens.fontHeading);
-					root.style.setProperty("--font-heading", newTokens.fontHeading);
-				}
-				if (newTokens.fontBody) {
-					loadFontsourceFont(newTokens.fontBody);
-					root.style.setProperty("--font-body", newTokens.fontBody);
-					root.style.fontFamily = newTokens.fontBody;
-				}
-				window.dispatchEvent(
-					new CustomEvent("theme-changed", {
-						detail: { tokens: newTokens, mode: resolvedMode },
-					}),
-				);
+				syncActiveFontCache();
 			}
 
-			// 2. Compute safe delta and update state
 			setCustomDelta((prev) => {
 				const nextDelta = { ...prev, ...newTokens };
 				persistState(activeThemeId, activeMode, nextDelta);
 				return nextDelta;
 			});
 		},
-		[resolvedMode, activeThemeId, activeMode, persistState],
+		[activeThemeId, activeMode, persistState],
 	);
 
 	const resetTheme = useCallback(() => {
 		setCustomDelta(undefined);
+		if (typeof document !== "undefined") {
+			const root = document.documentElement;
+			const style = root.style;
+			const toRemove: string[] = [];
+			for (let i = 0; i < style.length; i++) {
+				const prop = style[i];
+				if (prop && prop.startsWith("--")) {
+					toRemove.push(prop);
+				}
+			}
+			toRemove.forEach((p) => style.removeProperty(p));
+			root.style.removeProperty("--font-heading");
+			root.style.removeProperty("--font-body");
+			root.style.removeProperty("font-family");
+			root.removeAttribute("data-tactile");
+			try {
+				const keysToRemove: string[] = [];
+				for (let i = 0; i < localStorage.length; i++) {
+					const k = localStorage.key(i);
+					if (k && k.startsWith("k79_font_css_")) keysToRemove.push(k);
+				}
+				keysToRemove.forEach((k) => localStorage.removeItem(k));
+			} catch (_e) {}
+		}
 		persistState(activeThemeId, activeMode, undefined);
 	}, [activeThemeId, activeMode, persistState]);
 
+	const studioConfig = useMemo<ThemeStudioConfig | null>(() => {
+		if (typeof studio === "boolean") {
+			return studio ? { enabled: true } : null;
+		}
+		return studio;
+	}, [studio]);
+
 	useEffect(() => {
-		if (!syncBusRef.current) return;
-		return syncBusRef.current.subscribe(
-			(type, payload: CompactCookiePayload<T>) => {
-				if (type === "THEME_CHANGE" && payload) {
-					if (payload.id) setActiveThemeId(payload.id);
-					if (payload.m) setActiveMode(payload.m);
-					setCustomDelta(payload.d);
-				}
-			},
-		);
-	}, []);
+		if (!enableSync) return;
+		return syncBusRef.current?.subscribe((type, payload) => {
+			if (type === "THEME_CHANGE" && payload) {
+				const p = payload as CompactCookiePayload<T>;
+				if (p.id) setActiveThemeId(p.id);
+				if (p.m) setActiveMode(p.m);
+				setCustomDelta(p.d);
+			}
+		});
+	}, [enableSync]);
 
 	const openStudio = useCallback(() => setIsStudioOpen(true), []);
 	const closeStudio = useCallback(() => setIsStudioOpen(false), []);
@@ -371,6 +373,10 @@ export function ThemeProvider<T extends BaseTokens = BaseTokens>({
 			registerTheme: (theme: ThemeDefinition<T>) => {
 				setThemeRegistry((prev) => new Map(prev).set(theme.id, theme));
 			},
+			tactile: activeTokens?.tactile === "true",
+			setTactile: (enabled: boolean) => {
+				setCustomTokens({ tactile: enabled ? "true" : "false" } as Partial<T>);
+			},
 		}),
 		[
 			activeThemeId,
@@ -393,6 +399,10 @@ export function ThemeProvider<T extends BaseTokens = BaseTokens>({
 		<ThemeContext.Provider
 			value={value as unknown as ThemeContextValue<BaseTokens>}
 		>
+			<style
+				id="k79-theme-tactile-provider"
+				dangerouslySetInnerHTML={{ __html: TACTILE_CSS_RULES }}
+			/>
 			{children}
 			{studioConfig && studioConfig.enabled !== false && (
 				<>

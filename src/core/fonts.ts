@@ -4,7 +4,27 @@ const loadedFonts = new Set<string>();
 
 export function extractFontFamily(fontValue?: string): string | null {
 	if (!fontValue) return null;
-	if (fontValue.startsWith("var(--font-")) return null;
+	if (fontValue.startsWith("var(--font-")) {
+		const varName = fontValue
+			.replace(/^var\(--font-/, "")
+			.replace(/\).*$/, "")
+			.trim()
+			.toLowerCase();
+		if (varName === "jetbrains-mono") return "JetBrains Mono";
+		if (varName === "ibm-plex" || varName === "ibm-plex-sans") return "IBM Plex Sans";
+		if (varName === "noto-sans") return "Noto Sans";
+		if (varName === "inter") return "Inter";
+		if (varName === "space-grotesk") return "Space Grotesk";
+		if (varName === "fira-code") return "Fira Code";
+		if (varName === "outfit") return "Outfit";
+		if (varName === "plus-jakarta-sans") return "Plus Jakarta Sans";
+		if (varName === "playfair-display") return "Playfair Display";
+		const generated = varName
+			.split("-")
+			.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+			.join(" ");
+		return isValidFontFamily(generated) ? generated : null;
+	}
 	const match = fontValue.split(",")[0].trim().replace(/['"]/g, "");
 	return isValidFontFamily(match) ? match : null;
 }
