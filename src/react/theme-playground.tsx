@@ -61,7 +61,14 @@ export function ThemePlayground() {
 	};
 
 	return (
-		<div className="w-full max-w-6xl mx-auto p-6 md:p-10 space-y-8">
+		<div
+			className="w-full max-w-6xl mx-auto p-6 md:p-10 space-y-8"
+			style={{
+				maxWidth: "72rem",
+				marginLeft: "auto",
+				marginRight: "auto",
+			}}
+		>
 			{/* PLAYGROUND HEADER */}
 			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border">
 				<div>
@@ -76,7 +83,7 @@ export function ThemePlayground() {
 					</h1>
 					<p className="text-xs md:text-sm text-text-muted mt-1 max-w-xl">
 						Live testing harness for zero-runtime CSS tokens, mechanical
-						physics, fluid elevation, and dynamic Google Fonts streaming.
+						physics, fluid elevation, and dynamic Fontsource typography.
 					</p>
 				</div>
 
@@ -114,7 +121,14 @@ export function ThemePlayground() {
 			</div>
 
 			{/* KPI METRIC STAT CARDS */}
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+			<div
+				className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+				style={{
+					display: "grid",
+					gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+					gap: "1rem",
+				}}
+			>
 				<div className="p-4 rounded-xl bg-card border border-border space-y-1">
 					<span className="text-xs font-medium text-text-muted">
 						Monthly Recurring
@@ -200,7 +214,15 @@ export function ThemePlayground() {
 					<div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
 						Button Action States:
 					</div>
-					<div className="flex flex-wrap items-center gap-3">
+					<div
+						className="flex flex-wrap items-center gap-3"
+						style={{
+							display: "flex",
+							flexWrap: "wrap",
+							alignItems: "center",
+							gap: "0.75rem",
+						}}
+					>
 						<button
 							type="button"
 							onClick={() => setLocalCount((c) => c + 1)}
@@ -272,7 +294,15 @@ export function ThemePlayground() {
 					<div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
 						Status Badges &amp; Tokens:
 					</div>
-					<div className="flex flex-wrap items-center gap-2">
+					<div
+						className="flex flex-wrap items-center gap-2"
+						style={{
+							display: "flex",
+							flexWrap: "wrap",
+							alignItems: "center",
+							gap: "0.5rem",
+						}}
+					>
 						<span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-primary text-white">
 							Primary Badge
 						</span>
@@ -299,7 +329,14 @@ export function ThemePlayground() {
 					<div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
 						Form Controls &amp; Text Input:
 					</div>
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+					<div
+						className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+						style={{
+							display: "grid",
+							gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+							gap: "1rem",
+						}}
+					>
 						<div>
 							<label
 								htmlFor="playground-email"
